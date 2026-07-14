@@ -1,0 +1,134 @@
+<div class="page">
+  <header class="hero">
+    <p class="kicker">Personal memorization tracker</p>
+    <h1>My Quran Revision Roadmap</h1>
+    <p class="subtitle">
+      A focused, adaptable structure designed for long-term retention.
+    </p>
+    <p class="today">{{ todayLabel }}</p>
+  </header>
+
+  <section class="phase-bar" aria-label="Current phase">
+    <div class="phase-copy">
+      <span class="phase-label">Current Phase</span>
+      <strong>{{ progress.currentPhase }}</strong>
+      <span class="phase-meta" *ngIf="progress.currentLine > 0">
+        Line / ayah {{ progress.currentLine }}
+      </span>
+    </div>
+    <div class="phase-progress" aria-hidden="true">
+      <div class="phase-progress-fill" [style.width.%]="(completedCount() / 3) * 100"></div>
+    </div>
+    <p class="phase-count">{{ completedCount() }} / 3 daily tasks done</p>
+  </section>
+
+  <section class="panel" aria-labelledby="blueprint-heading">
+    <div class="panel-head">
+      <div>
+        <h2 id="blueprint-heading">Daily Time Allocation Blueprint</h2>
+        <p>Check off each block as you finish. Progress saves on this device.</p>
+      </div>
+      <div class="panel-actions">
+        <button type="button" class="btn ghost" (click)="resetToday()">Reset today</button>
+        <button type="button" class="btn solid" (click)="markAllDone()">Mark all done</button>
+      </div>
+    </div>
+
+    <div class="blueprint-grid">
+      <button
+        type="button"
+        class="task-card"
+        *ngFor="let item of blueprint"
+        [class.done]="isDone(item)"
+        (click)="toggle(item)"
+        [attr.aria-pressed]="isDone(item)"
+      >
+        <div class="task-top">
+          <span class="task-order">{{ item.order }}. {{ item.title }}</span>
+          <span class="duration">{{ item.durationMinutes }} Minutes</span>
+        </div>
+        <p>{{ taskCopy(item) }}</p>
+        <span class="check" aria-hidden="true">{{ isDone(item) ? '✓' : '' }}</span>
+      </button>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="manzil-heading">
+    <div class="panel-head">
+      <div>
+        <h2 id="manzil-heading">Weekly Manzil Loop</h2>
+        <p>30 minutes / day · today's focus is highlighted</p>
+      </div>
+      <div class="today-pill">
+        <span>Today</span>
+        <strong>{{ todayManzil.focusTitle }}</strong>
+        <em>{{ todayManzil.estimatedVolume }}</em>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Day</th>
+            <th scope="col">Revision Focus Area</th>
+            <th scope="col">Estimated Volume</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            *ngFor="let day of manzilLoop"
+            [class.is-today]="day.day === todayWeekday"
+          >
+            <td class="day-cell">{{ day.day }}</td>
+            <td>
+              <strong>{{ day.focusTitle }}</strong>
+              <span class="detail">{{ day.focusDetail }}</span>
+            </td>
+            <td class="volume">{{ day.estimatedVolume }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel settings" aria-labelledby="settings-heading">
+    <div class="panel-head">
+      <div>
+        <h2 id="settings-heading">Track your journey</h2>
+        <p>Update your current phase and export a backup anytime.</p>
+      </div>
+    </div>
+
+    <div class="settings-grid">
+      <label class="field">
+        <span>Current phase (surah)</span>
+        <input type="text" [(ngModel)]="phaseDraft" (keyup.enter)="savePhase()" />
+        <button type="button" class="btn solid" (click)="savePhase()">Save phase</button>
+      </label>
+
+      <label class="field">
+        <span>Current line / ayah reached</span>
+        <input type="number" min="0" [(ngModel)]="lineDraft" (keyup.enter)="saveLine()" />
+        <button type="button" class="btn solid" (click)="saveLine()">Save line</button>
+      </label>
+
+      <div class="field backup">
+        <span>Backup</span>
+        <div class="backup-actions">
+          <button type="button" class="btn ghost" (click)="downloadBackup()">Download JSON</button>
+          <label class="btn solid file-btn">
+            Restore backup
+            <input type="file" accept="application/json,.json" (change)="onImportFile($event)" hidden />
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <p class="status" *ngIf="statusMessage" role="status">{{ statusMessage }}</p>
+  </section>
+
+  <footer class="foot">
+    <p>Saved locally in your browser · no account required</p>
+  </footer>
+</div>

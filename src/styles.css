@@ -1,0 +1,26 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: "Source Sans 3", "Segoe UI", sans-serif;
+  color: #24352c;
+  background:
+    radial-gradient(circle at top left, rgba(190, 214, 170, 0.35), transparent 36%),
+    radial-gradient(circle at 85% 12%, rgba(214, 196, 150, 0.22), transparent 28%),
+    linear-gradient(180deg, #edf3e8 0%, #f7f4ec 52%, #e8efe3 100%);
+  background-attachment: fixed;
+}
+
+button,
+input {
+  font: inherit;
+}
