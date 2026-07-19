@@ -6,11 +6,18 @@
 
 html {
   -webkit-text-size-adjust: 100%;
+  /* Scales with screen so it stays readable but still fits one screen. */
+  font-size: clamp(15px, 0.72rem + 0.55vw, 19px);
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
 }
 
 body {
-  margin: 0;
-  min-height: 100vh;
   font-family: "Source Sans 3", "Segoe UI", sans-serif;
   color: #24352c;
   background:
@@ -20,7 +27,26 @@ body {
   background-attachment: fixed;
 }
 
+/* Below this width the layout stacks and is allowed to scroll (phones). */
+@media (max-width: 980px) {
+  html,
+  body {
+    height: auto;
+    overflow: auto;
+  }
+}
+
+/* Very short viewports: scrolling beats clipping content. */
+@media (max-height: 640px) {
+  html,
+  body {
+    height: auto;
+    overflow: auto;
+  }
+}
+
 button,
-input {
+input,
+select {
   font: inherit;
 }

@@ -1,134 +1,253 @@
 <div class="page">
-  <header class="hero">
-    <p class="kicker">Personal memorization tracker</p>
-    <h1>My Quran Revision Roadmap</h1>
-    <p class="subtitle">
-      A focused, adaptable structure designed for long-term retention.
-    </p>
-    <p class="today">{{ todayLabel }}</p>
+  <header class="topbar">
+    <div class="brand">
+      <h1>My Weekly Day-by-Day Revision Roadmap</h1>
+      <p>{{ todayLabel }}</p>
+    </div>
+
+    <div class="phase-strip">
+      <span class="phase-label">Phase</span>
+      <strong>{{ progress.currentPhase }}</strong>
+      <span class="phase-meta" *ngIf="progress.currentAyah > 0">
+        Ayah {{ progress.currentAyah }}<ng-container *ngIf="currentSurah">/{{ currentSurah.ayahCount }}</ng-container>
+      </span>
+      <span class="phase-meta">{{ completedCount() }}/{{ totalTasks }} today</span>
+      <div class="phase-progress" aria-hidden="true">
+        <div class="phase-progress-fill" [style.width.%]="(completedCount() / totalTasks) * 100"></div>
+      </div>
+    </div>
+
+    <div class="top-actions">
+      <button type="button" class="btn ghost" (click)="resetToday()">Reset</button>
+      <button type="button" class="btn solid" (click)="markAllDone()">All done</button>
+      <button type="button" class="btn ghost" (click)="downloadBackup()">Backup</button>
+      <label class="btn solid file-btn">
+        Restore
+        <input type="file" accept="application/json,.json" (change)="onImportFile($event)" hidden />
+      </label>
+    </div>
   </header>
 
-  <section class="phase-bar" aria-label="Current phase">
-    <div class="phase-copy">
-      <span class="phase-label">Current Phase</span>
-      <strong>{{ progress.currentPhase }}</strong>
-      <span class="phase-meta" *ngIf="progress.currentLine > 0">
-        Line / ayah {{ progress.currentLine }}
-      </span>
-    </div>
-    <div class="phase-progress" aria-hidden="true">
-      <div class="phase-progress-fill" [style.width.%]="(completedCount() / 3) * 100"></div>
-    </div>
-    <p class="phase-count">{{ completedCount() }} / 3 daily tasks done</p>
-  </section>
-
-  <section class="panel" aria-labelledby="blueprint-heading">
-    <div class="panel-head">
-      <div>
-        <h2 id="blueprint-heading">Daily Time Allocation Blueprint</h2>
-        <p>Check off each block as you finish. Progress saves on this device.</p>
+  <div class="workspace">
+    <section class="col left" aria-label="Daily plan and tracking">
+      <div class="blueprint-grid">
+        <button
+          type="button"
+          class="task-card"
+          *ngFor="let item of blueprint"
+          [class.done]="isDone(item)"
+          (click)="toggle(item)"
+          [attr.aria-pressed]="isDone(item)"
+        >
+          <div class="task-top">
+            <span class="task-order">{{ item.order }}. {{ item.title }}</span>
+            <span class="duration">{{ item.duration }}</span>
+          </div>
+          <p>{{ taskCopy(item) }}</p>
+          <span class="check" aria-hidden="true">{{ isDone(item) ? '✓' : '' }}</span>
+        </button>
       </div>
-      <div class="panel-actions">
-        <button type="button" class="btn ghost" (click)="resetToday()">Reset today</button>
-        <button type="button" class="btn solid" (click)="markAllDone()">Mark all done</button>
-      </div>
-    </div>
 
-    <div class="blueprint-grid">
-      <button
-        type="button"
-        class="task-card"
-        *ngFor="let item of blueprint"
-        [class.done]="isDone(item)"
-        (click)="toggle(item)"
-        [attr.aria-pressed]="isDone(item)"
-      >
-        <div class="task-top">
-          <span class="task-order">{{ item.order }}. {{ item.title }}</span>
-          <span class="duration">{{ item.durationMinutes }} Minutes</span>
-        </div>
-        <p>{{ taskCopy(item) }}</p>
-        <span class="check" aria-hidden="true">{{ isDone(item) ? '✓' : '' }}</span>
-      </button>
-    </div>
-  </section>
+      <div class="track-panel">
+        <div class="settings-grid">
+          <label class="field">
+            <span>Current phase (new surah)</span>
+            <select
+              [ngModel]="progress.currentSurahNumber"
+              (ngModelChange)="onPhaseChange($event)"
+            >
+              <option *ngFor="let surah of phaseOptions" [ngValue]="surah.number">
+                {{ surahLabel(surah) }}
+              </option>
+            </select>
+          </label>
 
-  <section class="panel" aria-labelledby="manzil-heading">
-    <div class="panel-head">
-      <div>
-        <h2 id="manzil-heading">Weekly Manzil Loop</h2>
-        <p>30 minutes / day · today's focus is highlighted</p>
-      </div>
-      <div class="today-pill">
-        <span>Today</span>
-        <strong>{{ todayManzil.focusTitle }}</strong>
-        <em>{{ todayManzil.estimatedVolume }}</em>
-      </div>
-    </div>
-
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th scope="col">Day</th>
-            <th scope="col">Revision Focus Area</th>
-            <th scope="col">Estimated Volume</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            *ngFor="let day of manzilLoop"
-            [class.is-today]="day.day === todayWeekday"
-          >
-            <td class="day-cell">{{ day.day }}</td>
-            <td>
-              <strong>{{ day.focusTitle }}</strong>
-              <span class="detail">{{ day.focusDetail }}</span>
-            </td>
-            <td class="volume">{{ day.estimatedVolume }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </section>
-
-  <section class="panel settings" aria-labelledby="settings-heading">
-    <div class="panel-head">
-      <div>
-        <h2 id="settings-heading">Track your journey</h2>
-        <p>Update your current phase and export a backup anytime.</p>
-      </div>
-    </div>
-
-    <div class="settings-grid">
-      <label class="field">
-        <span>Current phase (surah)</span>
-        <input type="text" [(ngModel)]="phaseDraft" (keyup.enter)="savePhase()" />
-        <button type="button" class="btn solid" (click)="savePhase()">Save phase</button>
-      </label>
-
-      <label class="field">
-        <span>Current line / ayah reached</span>
-        <input type="number" min="0" [(ngModel)]="lineDraft" (keyup.enter)="saveLine()" />
-        <button type="button" class="btn solid" (click)="saveLine()">Save line</button>
-      </label>
-
-      <div class="field backup">
-        <span>Backup</span>
-        <div class="backup-actions">
-          <button type="button" class="btn ghost" (click)="downloadBackup()">Download JSON</button>
-          <label class="btn solid file-btn">
-            Restore backup
-            <input type="file" accept="application/json,.json" (change)="onImportFile($event)" hidden />
+          <label class="field">
+            <span>Ayah reached</span>
+            <div class="ayah-row">
+              <select
+                [ngModel]="progress.currentAyah"
+                (ngModelChange)="onAyahChange($event)"
+              >
+                <option *ngFor="let ayah of ayahOptions" [ngValue]="ayah">
+                  {{ ayah === 0 ? '0' : ayah }}
+                </option>
+              </select>
+              <button
+                type="button"
+                class="btn solid"
+                [disabled]="!canAdvanceSurah"
+                (click)="advanceSurah()"
+              >
+                Done →
+              </button>
+            </div>
           </label>
         </div>
+
+        <p class="status" *ngIf="statusMessage" role="status">{{ statusMessage }}</p>
+      </div>
+
+      <div class="listen-panel">
+        <div class="listen-head">
+          <div>
+            <h3>Listen &amp; Mushaf — Today</h3>
+            <span>{{ todayManzil.day }} · Quran order</span>
+          </div>
+          <button
+            type="button"
+            class="mini sequence-button"
+            *ngIf="todaySurahs.length"
+            [class.active]="sequenceMode"
+            (click)="toggleSequence()"
+          >
+            {{ sequenceButtonLabel }}
+          </button>
+        </div>
+
+        <label class="reciter-field">
+          <span>Reciter</span>
+          <select
+            [ngModel]="selectedReciterId"
+            (ngModelChange)="onReciterChange($event)"
+          >
+            <option *ngFor="let r of reciters" [ngValue]="r.id">{{ r.label }}</option>
+          </select>
+        </label>
+
+        <audio
+          #player
+          class="audio"
+          controls
+          preload="none"
+          (play)="onAudioPlay()"
+          (pause)="onAudioPause()"
+          (ended)="onAudioEnded()"
+        ></audio>
+
+        <div class="list-wrap" *ngIf="todaySurahs.length; else bufferNote">
+          <ul class="surah-list" #surahList (scroll)="updateScrollHint()">
+            <li
+              *ngFor="let s of todaySurahs"
+              [class.playing]="playingSurah === s.number"
+            >
+              <span class="s-name">{{ surahLabel(s) }}</span>
+              <span class="s-actions">
+                <button type="button" class="mini" (click)="playSurah(s.number)">
+                  {{ playingSurah === s.number && isAudioPlaying ? '❚❚' : '▶' }} Listen
+                </button>
+                <button type="button" class="mini" (click)="openMushaf(s.number)">
+                  📖 Mushaf
+                </button>
+              </span>
+            </li>
+          </ul>
+          <button
+            type="button"
+            class="scroll-more"
+            *ngIf="showScrollHint"
+            (click)="scrollSurahList()"
+          >
+            {{ hiddenSurahCount > 0 ? '+' + hiddenSurahCount + ' more surahs' : 'More' }} ↓
+          </button>
+        </div>
+        <ng-template #bufferNote>
+          <p class="track-hint">Buffer day — no fixed surahs. Rest or revise weak spots.</p>
+        </ng-template>
+      </div>
+    </section>
+
+    <section class="col right" aria-labelledby="manzil-heading">
+      <div class="manzil-head">
+        <div>
+          <h2 id="manzil-heading">Day-by-Day Revision Focus</h2>
+          <p>3-day loop, twice a week · every surah seen ≥2×/week</p>
+        </div>
+        <div class="today-pill">
+          <span>Today</span>
+          <strong>{{ todayManzil.focusTitle }}</strong>
+          <em>{{ todayManzil.estimatedVolume }}</em>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Day</th>
+              <th scope="col">Focus</th>
+              <th scope="col">Vol</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              *ngFor="let day of manzilLoop"
+              [class.is-today]="day.day === todayWeekday"
+            >
+              <td class="day-cell">{{ day.day.slice(0, 3) }}</td>
+              <td>
+                <strong>{{ day.focusTitle }}</strong>
+                <span class="detail">{{ day.focusDetail }}</span>
+              </td>
+              <td class="volume">{{ day.estimatedVolume }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <details class="reminders">
+        <summary>High-Retention Reminders</summary>
+        <ul>
+          <li *ngFor="let r of reminders">
+            <strong>{{ r.title }}:</strong> {{ r.detail }}
+          </li>
+        </ul>
+      </details>
+    </section>
+  </div>
+
+  <!-- Inline mushaf overlay (floats over the single-page layout) -->
+  <div class="mushaf-overlay" *ngIf="mushafOpen" (click)="closeMushaf()">
+    <div
+      class="mushaf-card"
+      (click)="$event.stopPropagation()"
+      role="dialog"
+      aria-label="Mushaf page viewer"
+    >
+      <div class="mushaf-toolbar">
+        <div class="mushaf-meta">
+          <strong>{{ mushafSurahLabel }}</strong>
+          <span>Page {{ mushafPage }} / {{ totalMushafPages }}</span>
+        </div>
+        <div class="mushaf-nav">
+          <button
+            type="button"
+            class="btn solid"
+            (click)="mushafPrev()"
+            [disabled]="mushafPage <= 1"
+          >
+            ← Prev
+          </button>
+          <button
+            type="button"
+            class="btn solid"
+            (click)="mushafNext()"
+            [disabled]="mushafPage >= totalMushafPages"
+          >
+            Next →
+          </button>
+          <button type="button" class="btn ghost mushaf-close" (click)="closeMushaf()">
+            Close
+          </button>
+        </div>
+      </div>
+      <div class="mushaf-page-wrap">
+        <img
+          class="mushaf-page"
+          [src]="mushafImageUrl"
+          [alt]="'Mushaf page ' + mushafPage"
+        />
       </div>
     </div>
-
-    <p class="status" *ngIf="statusMessage" role="status">{{ statusMessage }}</p>
-  </section>
-
-  <footer class="foot">
-    <p>Saved locally in your browser · no account required</p>
-  </footer>
+  </div>
 </div>

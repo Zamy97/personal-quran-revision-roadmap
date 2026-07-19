@@ -1,11 +1,32 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import {
+  AfterViewInit,
+  Component,
+  ElementRef,
+  HostListener,
+  OnDestroy,
+  OnInit,
+  ViewChild
+} from '@angular/core';
 import { Subscription } from 'rxjs';
 import {
   DAILY_BLUEPRINT,
   DailyBlueprintItem,
   ManzilDay,
-  WEEKLY_MANZIL
+  RETENTION_REMINDERS,
+  WEEKLY_MANZIL,
+  isCoreManzilSurah
 } from '../../data/revision-plan';
+import {
+  TOTAL_MUSHAF_PAGES,
+  mushafPageImageUrl,
+  startPageForSurah
+} from '../../data/mushaf-pages';
+import {
+  DEFAULT_RECITER_ID,
+  RECITERS,
+  getReciter
+} from '../../data/reciters';
+import { SURAHS, Surah, formatSurahName, getSurah, surahLabel } from '../../data/surahs';
 import { MemorizationProgress } from '../../models/progress.model';
 import { ProgressService } from '../../services/progress.service';
 
@@ -14,34 +35,94 @@ import { ProgressService } from '../../services/progress.service';
   templateUrl: './roadmap.component.html',
   styleUrl: './roadmap.component.css'
 })
-export class RoadmapComponent implements OnInit, OnDestroy {
+export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly blueprint = DAILY_BLUEPRINT;
-  readonly manzilLoop = WEEKLY_MANZIL;
+  readonly reminders = RETENTION_REMINDERS;
+  readonly manzilLoop: ManzilDay[] = WEEKLY_MANZIL;
+  readonly surahLabel = surahLabel;
+  readonly totalTasks = DAILY_BLUEPRINT.length;
+  readonly reciters = RECITERS;
+  readonly totalMushafPages = TOTAL_MUSHAF_PAGES;
 
   progress: MemorizationProgress;
   todayLabel = '';
   todayWeekday = '';
   todayManzil!: ManzilDay;
-  phaseDraft = '';
-  lineDraft = 0;
+  ayahOptions: number[] = [];
   statusMessage = '';
+  playingSurah: number | null = null;
+  isAudioPlaying = false;
+  sequenceMode = false;
+  selectedReciterId = DEFAULT_RECITER_ID;
+
+  /** Inline mushaf viewer state */
+  mushafOpen = false;
+  mushafPage = 1;
+  mushafSurahNumber: number | null = null;
+
+  /** Scroll hint for the surah list */
+  showScrollHint = false;
+  hiddenSurahCount = 0;
+
+  @ViewChild('player') playerRef?: ElementRef<HTMLAudioElement>;
+  @ViewChild('surahList') surahListRef?: ElementRef<HTMLUListElement>;
 
   private sub?: Subscription;
   private statusTimer?: ReturnType<typeof setTimeout>;
 
   constructor(private readonly progressService: ProgressService) {
     this.progress = this.progressService.snapshot;
-    this.phaseDraft = this.progress.currentPhase;
-    this.lineDraft = this.progress.currentLine;
+    this.syncDerivedState(this.progress);
   }
 
   ngOnInit(): void {
-    this.refreshClock();
+    this.refreshClockLabels();
+    this.todayManzil =
+      this.manzilLoop.find((d) => d.dayIndex === new Date().getDay()) ||
+      this.manzilLoop[6];
     this.sub = this.progressService.progress$.subscribe((progress) => {
       this.progress = progress;
-      this.phaseDraft = progress.currentPhase;
-      this.lineDraft = progress.currentLine;
+      this.syncDerivedState(progress);
     });
+  }
+
+  ngAfterViewInit(): void {
+    // Let the list render first, then check whether it overflows.
+    setTimeout(() => this.updateScrollHint());
+  }
+
+  @HostListener('window:resize')
+  onWindowResize(): void {
+    this.updateScrollHint();
+  }
+
+  updateScrollHint(): void {
+    const el = this.surahListRef?.nativeElement;
+    if (!el) {
+      this.showScrollHint = false;
+      this.hiddenSurahCount = 0;
+      return;
+    }
+    const remaining = el.scrollHeight - el.scrollTop - el.clientHeight;
+    this.showScrollHint = remaining > 8;
+
+    if (this.showScrollHint) {
+      const items = Array.from(el.querySelectorAll('li'));
+      const visibleBottom = el.scrollTop + el.clientHeight;
+      this.hiddenSurahCount = items.filter(
+        (li) => li.offsetTop + li.offsetHeight / 2 > visibleBottom
+      ).length;
+    } else {
+      this.hiddenSurahCount = 0;
+    }
+  }
+
+  scrollSurahList(): void {
+    const el = this.surahListRef?.nativeElement;
+    if (!el) {
+      return;
+    }
+    el.scrollBy({ top: el.clientHeight * 0.8, behavior: 'smooth' });
   }
 
   ngOnDestroy(): void {
@@ -51,19 +132,174 @@ export class RoadmapComponent implements OnInit, OnDestroy {
     }
   }
 
+  get currentSurah(): Surah | undefined {
+    return getSurah(this.progress.currentSurahNumber);
+  }
+
+  get canAdvanceSurah(): boolean {
+    const surah = this.currentSurah;
+    return !!surah && this.progress.currentAyah >= surah.ayahCount;
+  }
+
+  /** Surahs scheduled for today's manzil, for the listen / mushaf panel. */
+  get todaySurahs(): Surah[] {
+    const numbers = this.todayManzil?.surahNumbers ?? [];
+    return numbers
+      .map((n) => getSurah(n))
+      .filter((s): s is Surah => !!s)
+      .sort((a, b) => a.number - b.number);
+  }
+
+  get sequenceButtonLabel(): string {
+    if (!this.sequenceMode) {
+      return '▶ Play all';
+    }
+    return this.isAudioPlaying ? '❚❚ Pause all' : '▶ Resume all';
+  }
+
+  get mushafImageUrl(): string {
+    return mushafPageImageUrl(this.mushafPage);
+  }
+
+  get mushafSurahLabel(): string {
+    if (!this.mushafSurahNumber) {
+      return '';
+    }
+    return formatSurahName(this.mushafSurahNumber);
+  }
+
+  audioUrl(surahNumber: number): string {
+    return getReciter(this.selectedReciterId).audioUrl(surahNumber);
+  }
+
+  onReciterChange(id: string): void {
+    this.selectedReciterId = id;
+    if (this.playingSurah != null) {
+      const surah = this.playingSurah;
+      const audio = this.playerRef?.nativeElement;
+      if (audio) {
+        const wasPlaying = !audio.paused;
+        const t = audio.currentTime;
+        audio.src = this.audioUrl(surah);
+        audio.load();
+        if (wasPlaying) {
+          audio.currentTime = 0;
+          audio.play().catch(() => undefined);
+        } else {
+          audio.currentTime = t;
+        }
+      }
+    }
+    this.flash(`Reciter: ${getReciter(id).label}`);
+  }
+
+  playSurah(surahNumber: number): void {
+    const audio = this.playerRef?.nativeElement;
+    if (!audio) {
+      return;
+    }
+    this.sequenceMode = false;
+    if (this.playingSurah === surahNumber && !audio.paused) {
+      audio.pause();
+      return;
+    }
+    this.startAudio(surahNumber);
+  }
+
+  toggleSequence(): void {
+    const audio = this.playerRef?.nativeElement;
+    if (!audio || !this.todaySurahs.length) {
+      return;
+    }
+
+    if (this.sequenceMode) {
+      if (audio.paused) {
+        audio.play().catch(() => {
+          this.flash('Could not resume audio — check your connection.');
+        });
+      } else {
+        audio.pause();
+      }
+      return;
+    }
+
+    this.sequenceMode = true;
+    this.startAudio(this.todaySurahs[0].number);
+  }
+
+  onAudioPlay(): void {
+    this.isAudioPlaying = true;
+  }
+
+  onAudioPause(): void {
+    this.isAudioPlaying = false;
+  }
+
+  onAudioEnded(): void {
+    this.isAudioPlaying = false;
+    if (!this.sequenceMode || this.playingSurah == null) {
+      return;
+    }
+
+    const currentIndex = this.todaySurahs.findIndex(
+      (surah) => surah.number === this.playingSurah
+    );
+    const nextSurah = this.todaySurahs[currentIndex + 1];
+    if (nextSurah) {
+      this.startAudio(nextSurah.number);
+      this.scrollPlayingSurahIntoView();
+      return;
+    }
+
+    this.sequenceMode = false;
+    this.playingSurah = null;
+    this.flash('Today’s revision sequence is complete.');
+  }
+
+  openMushaf(surahNumber: number): void {
+    this.mushafSurahNumber = surahNumber;
+    this.mushafPage = startPageForSurah(surahNumber);
+    this.mushafOpen = true;
+  }
+
+  closeMushaf(): void {
+    this.mushafOpen = false;
+  }
+
+  mushafPrev(): void {
+    if (this.mushafPage > 1) {
+      this.mushafPage -= 1;
+    }
+  }
+
+  mushafNext(): void {
+    if (this.mushafPage < TOTAL_MUSHAF_PAGES) {
+      this.mushafPage += 1;
+    }
+  }
+
+  /** Phase picker hides surahs already covered by the weekly plan. */
+  get phaseOptions(): Surah[] {
+    const current = this.progress.currentSurahNumber;
+    return SURAHS.filter(
+      (s) => s.number === current || !isCoreManzilSurah(s.number)
+    );
+  }
+
   taskCopy(item: DailyBlueprintItem): string {
-    const phase = this.progress?.currentPhase || 'your current surah';
-    const line = this.progress?.currentLine || 0;
+    const phase = this.progress?.currentPhase || 'current surah';
+    const ayah = this.progress?.currentAyah || 0;
 
     switch (item.id) {
-      case 'sabaq':
-        return `Memorize 2–3 new lines of ${phase}. Connect them firmly with the previous days' lines.`;
-      case 'sabqi':
-        return line > 0
-          ? `Recite ${phase} from verse 1 to line/ayah ${line}, ensuring smooth transitions within the current surah.`
-          : `Recite ${phase} from verse 1 to today's lines, ensuring smooth transitions within the current surah.`;
+      case 'sabaqSabqi': {
+        const sabqi =
+          ayah > 0
+            ? `recite ${phase} from verse 1 to ayah ${ayah}`
+            : `recite ${phase} from verse 1 to today's lines`;
+        return `First 15m: memorize 2–3 new lines of ${phase}. Next 15m: ${sabqi}, plus the last surah you fully finished.`;
+      }
       case 'manzil':
-        return `Protect your older memorization by running today's weekly loop: ${this.todayManzil.focusTitle}.`;
+        return `Follow today's day-by-day schedule: ${this.todayManzil.focusTitle}.`;
       default:
         return '';
     }
@@ -77,14 +313,25 @@ export class RoadmapComponent implements OnInit, OnDestroy {
     this.progressService.toggleTask(item.id);
   }
 
-  savePhase(): void {
-    this.progressService.setCurrentPhase(this.phaseDraft);
-    this.flash('Current phase updated.');
+  onPhaseChange(raw: string): void {
+    const number = Number(raw);
+    this.progressService.setCurrentSurah(number);
+    this.flash(`Phase set to ${formatSurahName(number)}.`);
   }
 
-  saveLine(): void {
-    this.progressService.setCurrentLine(Number(this.lineDraft));
-    this.flash('Progress line updated.');
+  onAyahChange(raw: string): void {
+    this.progressService.setCurrentAyah(Number(raw));
+    this.flash('Ayah progress updated.');
+  }
+
+  advanceSurah(): void {
+    const finished = formatSurahName(this.progress.currentSurahNumber);
+    const advanced = this.progressService.advanceToNextSurah();
+    this.flash(
+      advanced
+        ? `${finished} done. Moved to the next surah.`
+        : `${finished} done. You reached the end of the mushaf list.`
+    );
   }
 
   markAllDone(): void {
@@ -130,10 +377,40 @@ export class RoadmapComponent implements OnInit, OnDestroy {
     if (!d) {
       return 0;
     }
-    return Number(d.sabaq) + Number(d.sabqi) + Number(d.manzil);
+    return Number(d.sabaqSabqi) + Number(d.manzil);
   }
 
-  private refreshClock(): void {
+  private syncDerivedState(progress: MemorizationProgress): void {
+    const surah = getSurah(progress.currentSurahNumber);
+    this.ayahOptions = surah
+      ? Array.from({ length: surah.ayahCount + 1 }, (_, i) => i)
+      : [0];
+  }
+
+  private startAudio(surahNumber: number): void {
+    const audio = this.playerRef?.nativeElement;
+    if (!audio) {
+      return;
+    }
+    audio.src = this.audioUrl(surahNumber);
+    this.playingSurah = surahNumber;
+    audio.play().catch(() => {
+      this.isAudioPlaying = false;
+      this.flash('Could not play audio — check your connection.');
+    });
+  }
+
+  private scrollPlayingSurahIntoView(): void {
+    setTimeout(() => {
+      const item = this.surahListRef?.nativeElement.querySelector(
+        'li.playing'
+      );
+      item?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      this.updateScrollHint();
+    });
+  }
+
+  private refreshClockLabels(): void {
     const now = new Date();
     this.todayLabel = now.toLocaleDateString(undefined, {
       weekday: 'long',
@@ -142,9 +419,6 @@ export class RoadmapComponent implements OnInit, OnDestroy {
       day: 'numeric'
     });
     this.todayWeekday = now.toLocaleDateString(undefined, { weekday: 'long' });
-    const dayIndex = now.getDay();
-    this.todayManzil =
-      this.manzilLoop.find((d) => d.dayIndex === dayIndex) || this.manzilLoop[6];
   }
 
   private flash(message: string): void {

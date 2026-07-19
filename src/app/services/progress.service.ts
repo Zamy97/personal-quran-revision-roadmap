@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
-import { DEFAULT_PHASE } from '../data/revision-plan';
+import { DEFAULT_SURAH_NUMBER } from '../data/revision-plan';
+import { formatSurahName, getSurah, SURAHS } from '../data/surahs';
 import {
   DailyCompletion,
   MemorizationProgress,
@@ -8,7 +9,8 @@ import {
   todayKey
 } from '../models/progress.model';
 
-const STORAGE_KEY = 'quran-revision-progress-v1';
+const STORAGE_KEY = 'quran-revision-progress-v3';
+const LEGACY_KEYS = ['quran-revision-progress-v2', 'quran-revision-progress-v1'];
 
 @Injectable({ providedIn: 'root' })
 export class ProgressService {
@@ -22,30 +24,55 @@ export class ProgressService {
     return this.progressSubject.value;
   }
 
-  setCurrentPhase(phase: string): void {
-    this.update({ currentPhase: phase.trim() || DEFAULT_PHASE });
+  setCurrentSurah(surahNumber: number): void {
+    const surah = getSurah(surahNumber) || getSurah(DEFAULT_SURAH_NUMBER)!;
+    const ayah = Math.min(this.snapshot.currentAyah, surah.ayahCount);
+    this.update({
+      currentSurahNumber: surah.number,
+      currentAyah: ayah,
+      currentPhase: formatSurahName(surah.number),
+      currentLine: ayah
+    });
   }
 
-  setCurrentLine(line: number): void {
-    const safe = Number.isFinite(line) ? Math.max(0, Math.floor(line)) : 0;
-    this.update({ currentLine: safe });
+  setCurrentAyah(ayah: number): void {
+    const surah = getSurah(this.snapshot.currentSurahNumber);
+    const max = surah?.ayahCount ?? 0;
+    const safe = Number.isFinite(ayah)
+      ? Math.max(0, Math.min(max, Math.floor(ayah)))
+      : 0;
+    this.update({ currentAyah: safe, currentLine: safe });
+  }
+
+  /** Advances the current phase to the next surah in the mushaf order. */
+  advanceToNextSurah(): boolean {
+    const current = this.snapshot.currentSurahNumber;
+    const next = SURAHS.find((s) => s.number === current + 1);
+    if (!next) {
+      const surah = getSurah(current);
+      this.update({
+        currentAyah: surah?.ayahCount ?? 0,
+        currentLine: surah?.ayahCount ?? 0
+      });
+      return false;
+    }
+    this.update({
+      currentSurahNumber: next.number,
+      currentAyah: 0,
+      currentLine: 0,
+      currentPhase: formatSurahName(next.number)
+    });
+    return true;
   }
 
   toggleTask(task: keyof Omit<DailyCompletion, 'date'>): void {
     const daily = this.ensureTodayDaily();
-    this.update({
-      daily: {
-        ...daily,
-        [task]: !daily[task]
-      }
-    });
+    this.update({ daily: { ...daily, [task]: !daily[task] } });
   }
 
   markAllDone(): void {
     const daily = this.ensureTodayDaily();
-    this.update({
-      daily: { ...daily, sabaq: true, sabqi: true, manzil: true }
-    });
+    this.update({ daily: { ...daily, sabaqSabqi: true, manzil: true } });
   }
 
   resetToday(): void {
@@ -58,8 +85,8 @@ export class ProgressService {
 
   importJson(raw: string): boolean {
     try {
-      const parsed = JSON.parse(raw) as MemorizationProgress;
-      if (!parsed || typeof parsed.currentPhase !== 'string') {
+      const parsed = JSON.parse(raw) as Partial<MemorizationProgress>;
+      if (!parsed) {
         return false;
       }
       const next = this.normalize(parsed);
@@ -93,34 +120,71 @@ export class ProgressService {
 
   private load(): MemorizationProgress {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      let raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) {
+        for (const key of LEGACY_KEYS) {
+          raw = localStorage.getItem(key);
+          if (raw) {
+            break;
+          }
+        }
+      }
       if (!raw) {
         return this.createDefault();
       }
-      return this.normalize(JSON.parse(raw) as MemorizationProgress);
+      const normalized = this.normalize(
+        JSON.parse(raw) as Partial<MemorizationProgress>
+      );
+      this.persist(normalized);
+      return normalized;
     } catch {
       return this.createDefault();
     }
   }
 
-  private normalize(value: MemorizationProgress): MemorizationProgress {
+  private normalize(value: Partial<MemorizationProgress>): MemorizationProgress {
     const today = todayKey();
+    const rawDaily = value.daily as
+      | (Partial<DailyCompletion> & { sabaq?: boolean; sabqi?: boolean })
+      | undefined;
     const daily =
-      value.daily?.date === today
+      rawDaily?.date === today
         ? {
             date: today,
-            sabaq: !!value.daily.sabaq,
-            sabqi: !!value.daily.sabqi,
-            manzil: !!value.daily.manzil
+            sabaqSabqi:
+              rawDaily.sabaqSabqi ?? (!!rawDaily.sabaq && !!rawDaily.sabqi),
+            manzil: !!rawDaily.manzil
           }
         : emptyDaily();
 
+    let surahNumber =
+      typeof value.currentSurahNumber === 'number'
+        ? value.currentSurahNumber
+        : DEFAULT_SURAH_NUMBER;
+
+    if (!getSurah(surahNumber) && typeof value.currentPhase === 'string') {
+      const match = value.currentPhase.match(/muddaththir/i)
+        ? 74
+        : SURAHS.find((s) =>
+            value.currentPhase!.toLowerCase().includes(s.name.toLowerCase())
+          )?.number;
+      surahNumber = match || DEFAULT_SURAH_NUMBER;
+    }
+
+    const surah = getSurah(surahNumber) || getSurah(DEFAULT_SURAH_NUMBER)!;
+    const rawAyah =
+      typeof value.currentAyah === 'number'
+        ? value.currentAyah
+        : typeof value.currentLine === 'number'
+          ? value.currentLine
+          : 0;
+    const ayah = Math.max(0, Math.min(surah.ayahCount, Math.floor(rawAyah)));
+
     return {
-      currentPhase: value.currentPhase || DEFAULT_PHASE,
-      currentLine:
-        typeof value.currentLine === 'number' && value.currentLine >= 0
-          ? Math.floor(value.currentLine)
-          : 0,
+      currentSurahNumber: surah.number,
+      currentAyah: ayah,
+      currentPhase: formatSurahName(surah.number),
+      currentLine: ayah,
       daily,
       updatedAt: value.updatedAt || new Date().toISOString()
     };
@@ -128,7 +192,9 @@ export class ProgressService {
 
   private createDefault(): MemorizationProgress {
     return {
-      currentPhase: DEFAULT_PHASE,
+      currentSurahNumber: DEFAULT_SURAH_NUMBER,
+      currentAyah: 0,
+      currentPhase: formatSurahName(DEFAULT_SURAH_NUMBER),
       currentLine: 0,
       daily: emptyDaily(),
       updatedAt: new Date().toISOString()

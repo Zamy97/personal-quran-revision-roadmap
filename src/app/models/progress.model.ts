@@ -1,13 +1,16 @@
 export interface DailyCompletion {
   date: string; // YYYY-MM-DD
-  sabaq: boolean;
-  sabqi: boolean;
+  sabaqSabqi: boolean;
   manzil: boolean;
 }
 
 export interface MemorizationProgress {
+  /** Surah currently being memorized (1–114) */
+  currentSurahNumber: number;
+  /** Latest ayah reached in the current surah */
+  currentAyah: number;
+  /** Kept for older backups / display compatibility */
   currentPhase: string;
-  /** Latest ayah/line reached in the current phase surah */
   currentLine: number;
   daily: DailyCompletion;
   updatedAt: string;
@@ -23,8 +26,7 @@ export function todayKey(date = new Date()): string {
 export function emptyDaily(date = new Date()): DailyCompletion {
   return {
     date: todayKey(date),
-    sabaq: false,
-    sabqi: false,
+    sabaqSabqi: false,
     manzil: false
   };
 }
