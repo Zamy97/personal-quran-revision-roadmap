@@ -92,7 +92,7 @@
         <div class="listen-head">
           <div>
             <h3>Listen &amp; Mushaf — Today</h3>
-            <span>{{ todayManzil.day }} · Quran order · tap × to repeat in Play all</span>
+            <span>{{ todayManzil.day }} · Quran order · set × for Play all repeats</span>
           </div>
           <button
             type="button"
@@ -141,17 +141,18 @@
                 </span>
               </span>
               <span class="s-actions">
-                <button
-                  type="button"
-                  class="mini repeat"
-                  [class.boosted]="getRepeatCount(s.number) > 1"
-                  [attr.aria-label]="
-                    'Play ' + getRepeatCount(s.number) + ' times in Play all'
-                  "
-                  (click)="cycleRepeat(s.number)"
-                >
-                  ×{{ getRepeatCount(s.number) }}
-                </button>
+                <label class="repeat-field" [class.boosted]="getRepeatCount(s.number) > 1">
+                  <span class="sr-only">Repeats in Play all</span>
+                  <select
+                    [ngModel]="getRepeatCount(s.number)"
+                    (ngModelChange)="setRepeat(s.number, $event)"
+                    [attr.aria-label]="'Play count for ' + surahLabel(s)"
+                  >
+                    <option *ngFor="let n of repeatChoices" [ngValue]="n">
+                      ×{{ n }}
+                    </option>
+                  </select>
+                </label>
                 <button type="button" class="mini" (click)="playSurah(s.number)">
                   {{ playingSurah === s.number && isAudioPlaying ? '❚❚' : '▶' }} Listen
                 </button>

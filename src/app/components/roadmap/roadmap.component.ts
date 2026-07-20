@@ -56,6 +56,8 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
   /** Current play number within a surah during Play all (1-based). */
   sequenceRep = 1;
   selectedReciterId = DEFAULT_RECITER_ID;
+  /** Choices for how many times a surah plays in Play all. */
+  readonly repeatChoices = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
   /** Inline mushaf viewer state */
   mushafOpen = false;
@@ -166,9 +168,8 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
     return this.repeatBySurah.get(surahNumber) ?? 1;
   }
 
-  cycleRepeat(surahNumber: number): void {
-    const current = this.getRepeatCount(surahNumber);
-    const next = current >= 3 ? 1 : current + 1;
+  setRepeat(surahNumber: number, raw: number | string): void {
+    const next = Math.min(10, Math.max(1, Number(raw) || 1));
     if (next === 1) {
       this.repeatBySurah.delete(surahNumber);
     } else {

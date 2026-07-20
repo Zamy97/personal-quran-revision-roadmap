@@ -495,21 +495,40 @@
   border-color: rgba(31, 77, 58, 0.5);
 }
 
-.mini.repeat {
-  min-width: 2.4rem;
-  justify-content: center;
-  padding-inline: 0.45rem;
+.repeat-field {
+  display: inline-flex;
+  align-items: center;
 }
 
-.mini.repeat.boosted {
+.repeat-field select {
+  min-height: 1.9rem;
+  padding: 0.2rem 0.35rem;
+  border: 1px solid rgba(31, 77, 58, 0.25);
+  border-radius: 999px;
+  background: #f4f9f0;
+  color: #1f4d3a;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.repeat-field.boosted select {
   background: #1f4d3a;
   border-color: #1f4d3a;
   color: #f4f7f2;
 }
 
-.mini.repeat.boosted:hover {
-  background: #163a2c;
-  border-color: #163a2c;
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .surah-list li.playing .mini {
