@@ -184,11 +184,7 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
 
   sequenceProgressLabel(surahNumber: number): string {
     const total = this.getRepeatCount(surahNumber);
-    if (
-      !this.sequenceMode ||
-      this.playingSurah !== surahNumber ||
-      total <= 1
-    ) {
+    if (this.playingSurah !== surahNumber || total <= 1) {
       return '';
     }
     return `${this.sequenceRep}/${total}`;
@@ -277,7 +273,7 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
 
   onAudioEnded(): void {
     this.isAudioPlaying = false;
-    if (!this.sequenceMode || this.playingSurah == null) {
+    if (this.playingSurah == null) {
       return;
     }
 
@@ -292,19 +288,25 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
 
+    // Finished all repeats for this surah.
+    this.sequenceRep = 1;
+
+    if (!this.sequenceMode) {
+      this.playingSurah = null;
+      return;
+    }
+
     const currentIndex = this.todaySurahs.findIndex(
       (surah) => surah.number === current
     );
     const nextSurah = this.todaySurahs[currentIndex + 1];
     if (nextSurah) {
-      this.sequenceRep = 1;
       this.startAudio(nextSurah.number);
       this.scrollPlayingSurahIntoView();
       return;
     }
 
     this.sequenceMode = false;
-    this.sequenceRep = 1;
     this.playingSurah = null;
     this.flash('Today’s revision sequence is complete.');
   }
