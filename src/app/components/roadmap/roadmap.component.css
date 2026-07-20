@@ -444,16 +444,33 @@
   background: #eef6ea;
 }
 
+.s-main {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
 .s-name {
   font-size: 0.98rem;
   color: #163a2c;
   font-weight: 600;
 }
 
+.s-rep-progress {
+  flex: 0 0 auto;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #2f6b4f;
+  letter-spacing: 0.02em;
+}
+
 .s-actions {
   display: flex;
-  gap: 0.4rem;
+  gap: 0.35rem;
   flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .mini {
@@ -476,6 +493,23 @@
 .mini:hover {
   background: #e6f1de;
   border-color: rgba(31, 77, 58, 0.5);
+}
+
+.mini.repeat {
+  min-width: 2.4rem;
+  justify-content: center;
+  padding-inline: 0.45rem;
+}
+
+.mini.repeat.boosted {
+  background: #1f4d3a;
+  border-color: #1f4d3a;
+  color: #f4f7f2;
+}
+
+.mini.repeat.boosted:hover {
+  background: #163a2c;
+  border-color: #163a2c;
 }
 
 .surah-list li.playing .mini {

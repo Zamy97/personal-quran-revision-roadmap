@@ -53,6 +53,8 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
   playingSurah: number | null = null;
   isAudioPlaying = false;
   sequenceMode = false;
+  /** Current play number within a surah during Play all (1-based). */
+  sequenceRep = 1;
   selectedReciterId = DEFAULT_RECITER_ID;
 
   /** Inline mushaf viewer state */
@@ -63,6 +65,9 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
   /** Scroll hint for the surah list */
   showScrollHint = false;
   hiddenSurahCount = 0;
+
+  /** Session-only Play all repeats per surah number (default 1). */
+  private readonly repeatBySurah = new Map<number, number>();
 
   @ViewChild('player') playerRef?: ElementRef<HTMLAudioElement>;
   @ViewChild('surahList') surahListRef?: ElementRef<HTMLUListElement>;
@@ -157,6 +162,37 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
     return this.isAudioPlaying ? '❚❚ Pause all' : '▶ Resume all';
   }
 
+  getRepeatCount(surahNumber: number): number {
+    return this.repeatBySurah.get(surahNumber) ?? 1;
+  }
+
+  cycleRepeat(surahNumber: number): void {
+    const current = this.getRepeatCount(surahNumber);
+    const next = current >= 3 ? 1 : current + 1;
+    if (next === 1) {
+      this.repeatBySurah.delete(surahNumber);
+    } else {
+      this.repeatBySurah.set(surahNumber, next);
+    }
+    this.flash(
+      next === 1
+        ? `${formatSurahName(surahNumber)} will play once in Play all.`
+        : `${formatSurahName(surahNumber)} will play ×${next} in Play all.`
+    );
+  }
+
+  sequenceProgressLabel(surahNumber: number): string {
+    const total = this.getRepeatCount(surahNumber);
+    if (
+      !this.sequenceMode ||
+      this.playingSurah !== surahNumber ||
+      total <= 1
+    ) {
+      return '';
+    }
+    return `${this.sequenceRep}/${total}`;
+  }
+
   get mushafImageUrl(): string {
     return mushafPageImageUrl(this.mushafPage);
   }
@@ -199,6 +235,7 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
     this.sequenceMode = false;
+    this.sequenceRep = 1;
     if (this.playingSurah === surahNumber && !audio.paused) {
       audio.pause();
       return;
@@ -224,7 +261,9 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     this.sequenceMode = true;
+    this.sequenceRep = 1;
     this.startAudio(this.todaySurahs[0].number);
+    this.scrollPlayingSurahIntoView();
   }
 
   onAudioPlay(): void {
@@ -241,17 +280,30 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
 
+    const current = this.playingSurah;
+    const needed = this.getRepeatCount(current);
+    if (this.sequenceRep < needed) {
+      this.sequenceRep += 1;
+      this.startAudio(current);
+      this.flash(
+        `${formatSurahName(current)} — repeat ${this.sequenceRep} of ${needed}`
+      );
+      return;
+    }
+
     const currentIndex = this.todaySurahs.findIndex(
-      (surah) => surah.number === this.playingSurah
+      (surah) => surah.number === current
     );
     const nextSurah = this.todaySurahs[currentIndex + 1];
     if (nextSurah) {
+      this.sequenceRep = 1;
       this.startAudio(nextSurah.number);
       this.scrollPlayingSurahIntoView();
       return;
     }
 
     this.sequenceMode = false;
+    this.sequenceRep = 1;
     this.playingSurah = null;
     this.flash('Today’s revision sequence is complete.');
   }

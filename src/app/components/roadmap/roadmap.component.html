@@ -92,7 +92,7 @@
         <div class="listen-head">
           <div>
             <h3>Listen &amp; Mushaf — Today</h3>
-            <span>{{ todayManzil.day }} · Quran order</span>
+            <span>{{ todayManzil.day }} · Quran order · tap × to repeat in Play all</span>
           </div>
           <button
             type="button"
@@ -131,8 +131,27 @@
               *ngFor="let s of todaySurahs"
               [class.playing]="playingSurah === s.number"
             >
-              <span class="s-name">{{ surahLabel(s) }}</span>
+              <span class="s-main">
+                <span class="s-name">{{ surahLabel(s) }}</span>
+                <span
+                  class="s-rep-progress"
+                  *ngIf="sequenceProgressLabel(s.number) as progress"
+                >
+                  {{ progress }}
+                </span>
+              </span>
               <span class="s-actions">
+                <button
+                  type="button"
+                  class="mini repeat"
+                  [class.boosted]="getRepeatCount(s.number) > 1"
+                  [attr.aria-label]="
+                    'Play ' + getRepeatCount(s.number) + ' times in Play all'
+                  "
+                  (click)="cycleRepeat(s.number)"
+                >
+                  ×{{ getRepeatCount(s.number) }}
+                </button>
                 <button type="button" class="mini" (click)="playSurah(s.number)">
                   {{ playingSurah === s.number && isAudioPlaying ? '❚❚' : '▶' }} Listen
                 </button>
