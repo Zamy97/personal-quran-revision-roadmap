@@ -130,8 +130,13 @@
   background: rgba(255, 255, 255, 0.85);
   border: 1px solid rgba(22, 58, 44, 0.1);
   box-shadow: 0 10px 24px rgba(22, 58, 44, 0.07);
-  /* Safety net: scroll instead of letting sections overlap. */
-  overflow: auto;
+  /* Column itself stays fixed; only inner lists/tables scroll. */
+  overflow: hidden;
+}
+
+.col.left {
+  /* Keep checklist + tracking pinned; surah list scrolls below. */
+  overflow: hidden;
 }
 
 /* ---------- Daily blueprint cards ---------- */
@@ -281,14 +286,15 @@
 /* ---------- Listen & Mushaf panel ---------- */
 .listen-panel {
   flex: 1 1 auto;
-  /* Keep room for the heading, reciter and player plus a couple of rows;
-     below this the column scrolls instead of squashing/overlapping. */
-  min-height: 13rem;
+  /* Must be 0 so this panel shrinks and the surah list scrolls inside it
+     instead of forcing the whole left column to scroll. */
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: clamp(0.3rem, 0.7vh, 0.5rem);
   padding-top: clamp(0.5rem, 1vh, 0.85rem);
   border-top: 1px solid rgba(22, 58, 44, 0.12);
+  overflow: hidden;
 }
 
 .listen-head {
@@ -882,6 +888,23 @@ tbody td strong {
   .workspace {
     grid-template-columns: 1fr;
   }
+
+  .col,
+  .col.left,
+  .listen-panel {
+    overflow: visible;
+  }
+
+  .listen-panel,
+  .list-wrap,
+  .surah-list {
+    min-height: 0;
+    max-height: none;
+  }
+
+  .surah-list {
+    overflow: visible;
+  }
 }
 
 @media (max-width: 560px) {
@@ -955,9 +978,16 @@ tbody td strong {
     min-height: 100dvh;
   }
 
+  .col,
+  .col.left,
+  .listen-panel {
+    overflow: visible;
+  }
+
   .table-wrap,
   .surah-list,
   .reminders ul {
     max-height: none;
+    overflow: visible;
   }
 }
