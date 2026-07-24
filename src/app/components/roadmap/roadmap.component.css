@@ -947,13 +947,14 @@ tbody td strong {
 }
 
 .mushaf-card {
-  width: min(720px, 100%);
-  max-height: calc(100dvh - 2rem);
+  width: min(1100px, 96vw);
+  height: min(92dvh, 980px);
+  max-height: calc(100dvh - 1.2rem);
   display: flex;
   flex-direction: column;
   border-radius: 14px;
-  background: var(--surface-2);
-  box-shadow: 0 22px 48px rgba(0, 0, 0, 0.28);
+  background: #014761;
+  box-shadow: 0 22px 48px rgba(0, 0, 0, 0.35);
   overflow: hidden;
 }
 
@@ -964,8 +965,8 @@ tbody td strong {
   justify-content: space-between;
   align-items: center;
   padding: 0.7rem 0.9rem;
-  background: var(--brand-deep);
-  color: var(--on-brand);
+  background: #0f1b3d;
+  color: #f5f8ff;
   flex: 0 0 auto;
 }
 
@@ -981,7 +982,7 @@ tbody td strong {
 
 .mushaf-meta span {
   font-size: 0.85rem;
-  color: var(--on-brand-muted);
+  color: #c5d2f5;
 }
 
 .mushaf-nav {
@@ -1000,21 +1001,55 @@ tbody td strong {
   border-color: rgba(232, 240, 226, 0.4) !important;
 }
 
+.mushaf-external {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
 .mushaf-page-wrap {
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
-  background: var(--sand-panel);
-  padding: 0.6rem;
+  background: #014761;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
 }
 
-.mushaf-page {
+.mushaf-canvas {
   display: block;
-  width: 100%;
+  max-width: 100%;
   height: auto;
-  border-radius: 6px;
-  background: var(--surface);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  background: #fff;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+}
+
+.mushaf-canvas.is-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.mushaf-status {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: 1rem;
+  color: #e8f0e2;
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+.mushaf-status.mushaf-error {
+  color: #ffd0c8;
+}
+
+.mushaf-nav .btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 /* ---------- Responsive (phones: allow stacking + scroll) ---------- */

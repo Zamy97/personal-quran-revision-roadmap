@@ -247,36 +247,49 @@
       <div class="mushaf-toolbar">
         <div class="mushaf-meta">
           <strong>{{ mushafSurahLabel }}</strong>
-          <span>Page {{ mushafPage }} / {{ totalMushafPages }}</span>
+          <span>15-line Tajweed · Page {{ mushafPage }} / {{ totalMushafPages }}</span>
         </div>
         <div class="mushaf-nav">
           <button
             type="button"
-            class="btn solid"
-            (click)="mushafPrev()"
-            [disabled]="mushafPage <= 1"
+            class="btn ghost"
+            [disabled]="!canGoPrevMushafPage || mushafLoading"
+            (click)="shiftMushafPage(-1)"
           >
-            ← Prev
+            Prev
           </button>
           <button
             type="button"
-            class="btn solid"
-            (click)="mushafNext()"
-            [disabled]="mushafPage >= totalMushafPages"
+            class="btn ghost"
+            [disabled]="!canGoNextMushafPage || mushafLoading"
+            (click)="shiftMushafPage(1)"
           >
-            Next →
+            Next
           </button>
+          <a
+            class="btn ghost mushaf-external"
+            [href]="mushafViewerHref"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Full screen
+          </a>
           <button type="button" class="btn ghost mushaf-close" (click)="closeMushaf()">
             Close
           </button>
         </div>
       </div>
-      <div class="mushaf-page-wrap">
-        <img
-          class="mushaf-page"
-          [src]="mushafImageUrl"
-          [alt]="'Mushaf page ' + mushafPage"
-        />
+      <div class="mushaf-page-wrap" #mushafPageWrap>
+        <p class="mushaf-status" *ngIf="mushafLoading">Loading page…</p>
+        <p class="mushaf-status mushaf-error" *ngIf="!mushafLoading && mushafError">
+          {{ mushafError }}
+        </p>
+        <canvas
+          #mushafCanvas
+          class="mushaf-canvas"
+          [class.is-hidden]="mushafLoading || !!mushafError"
+          title="15-line Tajweed Quran page {{ mushafPage }}"
+        ></canvas>
       </div>
     </div>
   </div>

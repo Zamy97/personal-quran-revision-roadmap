@@ -1,8 +1,13 @@
+import { environment } from '../../environments/environment';
+
 /**
- * Madinah Mushaf (604 pages) — starting page for each surah (1–114).
- * Used to open the inline page viewer near the start of a surah.
+ * Local 15-line Tajweed Color Quran PDF (656 pages).
+ * Prefer environment.mushafPdfUrl when hosting remotely; otherwise local assets.
+ *
+ * Surah start pages are converted from the classic Madinah 604-page index
+ * into this 656-page edition so "Open Mushaf" lands near the right spot.
  */
-export const SURAH_START_PAGE: number[] = [
+const MADINAH_SURAH_START_PAGE: number[] = [
   0, // unused (1-indexed)
   1, 2, 50, 77, 106, 128, 151, 177, 187, 208, 221, 235, 249, 255, 262, 267,
   282, 293, 305, 312, 322, 332, 342, 350, 359, 367, 377, 385, 396, 404, 411,
@@ -14,17 +19,36 @@ export const SURAH_START_PAGE: number[] = [
   602, 602, 603, 603, 603, 604, 604, 604
 ];
 
-export const TOTAL_MUSHAF_PAGES = 604;
+export const TOTAL_MUSHAF_PAGES = 656;
+const MADINAH_TOTAL_PAGES = 604;
+
+const LOCAL_MUSHAF_PDF_PATH =
+  '/assets/quran/TAJWEED%20COLOR%20QURAN%20-%2015%20LINES.pdf';
+
+/** PDF URL used by the in-app viewer (remote env URL or local assets). */
+export const MUSHAF_PDF_PATH =
+  (environment.mushafPdfUrl || '').trim() || LOCAL_MUSHAF_PDF_PATH;
+
+export function madinahToLocalPage(madinahPage: number): number {
+  const p = Math.max(1, Math.min(MADINAH_TOTAL_PAGES, Math.floor(madinahPage)));
+  return Math.max(
+    1,
+    Math.min(
+      TOTAL_MUSHAF_PAGES,
+      Math.round(((p - 1) * (TOTAL_MUSHAF_PAGES - 1)) / (MADINAH_TOTAL_PAGES - 1)) + 1
+    )
+  );
+}
 
 export function startPageForSurah(surahNumber: number): number {
   if (surahNumber < 1 || surahNumber > 114) {
     return 1;
   }
-  return SURAH_START_PAGE[surahNumber] || 1;
+  return madinahToLocalPage(MADINAH_SURAH_START_PAGE[surahNumber] || 1);
 }
 
-/** Madinah page image (SVG) from islamic.app CDN. */
-export function mushafPageImageUrl(page: number): string {
+/** Direct PDF link opened at a specific page (browser viewer / full screen). */
+export function mushafViewerUrl(page: number): string {
   const p = Math.max(1, Math.min(TOTAL_MUSHAF_PAGES, Math.floor(page)));
-  return `https://api.islamic.app/v1/mushaf/page/${p}.svg?theme=light&width=720`;
+  return `${MUSHAF_PDF_PATH}#page=${p}`;
 }

@@ -45,3 +45,6 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+
+# Large local mushaf PDF (keep on disk for ng serve; do not commit)
+/src/assets/quran/*.pdf

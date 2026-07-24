@@ -17,8 +17,9 @@ import {
   isCoreManzilSurah
 } from '../../data/revision-plan';
 import {
+  MUSHAF_PDF_PATH,
   TOTAL_MUSHAF_PAGES,
-  mushafPageImageUrl,
+  mushafViewerUrl as buildMushafViewerUrl,
   startPageForSurah
 } from '../../data/mushaf-pages';
 import {
@@ -29,6 +30,13 @@ import {
 import { SURAHS, Surah, formatSurahName, getSurah, surahLabel } from '../../data/surahs';
 import { MemorizationProgress } from '../../models/progress.model';
 import { ProgressService } from '../../services/progress.service';
+import {
+  GlobalWorkerOptions,
+  PDFDocumentProxy,
+  getDocument
+} from 'pdfjs-dist';
+
+GlobalWorkerOptions.workerSrc = '/assets/quran/pdf.worker.min.mjs';
 
 @Component({
   selector: 'app-roadmap',
@@ -63,6 +71,8 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
   mushafOpen = false;
   mushafPage = 1;
   mushafSurahNumber: number | null = null;
+  mushafLoading = false;
+  mushafError = '';
 
   /** Scroll hint for the surah list */
   showScrollHint = false;
@@ -72,9 +82,14 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
   /** Session-only Play all repeats per surah number (default 1). */
   private readonly repeatBySurah = new Map<number, number>();
   private readonly themeStorageKey = 'quran-revision-theme';
+  private pdfDoc: PDFDocumentProxy | null = null;
+  private pdfLoadPromise: Promise<PDFDocumentProxy> | null = null;
+  private mushafRenderToken = 0;
 
   @ViewChild('player') playerRef?: ElementRef<HTMLAudioElement>;
   @ViewChild('surahList') surahListRef?: ElementRef<HTMLUListElement>;
+  @ViewChild('mushafCanvas') mushafCanvasRef?: ElementRef<HTMLCanvasElement>;
+  @ViewChild('mushafPageWrap') mushafPageWrapRef?: ElementRef<HTMLDivElement>;
 
   private sub?: Subscription;
   private statusTimer?: ReturnType<typeof setTimeout>;
@@ -141,6 +156,29 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
   @HostListener('window:resize')
   onWindowResize(): void {
     this.updateScrollHint();
+    if (this.mushafOpen) {
+      void this.renderMushafPage();
+    }
+  }
+
+  @HostListener('window:keydown', ['$event'])
+  onWindowKeydown(event: KeyboardEvent): void {
+    if (!this.mushafOpen) {
+      return;
+    }
+    if (event.key === 'Escape') {
+      this.closeMushaf();
+      return;
+    }
+    if (event.key === 'ArrowLeft' || event.key === 'PageUp') {
+      event.preventDefault();
+      void this.shiftMushafPage(-1);
+      return;
+    }
+    if (event.key === 'ArrowRight' || event.key === 'PageDown') {
+      event.preventDefault();
+      void this.shiftMushafPage(1);
+    }
   }
 
   updateScrollHint(): void {
@@ -177,6 +215,9 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
     if (this.statusTimer) {
       clearTimeout(this.statusTimer);
     }
+    void this.pdfDoc?.destroy();
+    this.pdfDoc = null;
+    this.pdfLoadPromise = null;
   }
 
   get currentSurah(): Surah | undefined {
@@ -230,15 +271,23 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
     return `${this.sequenceRep}/${total}`;
   }
 
-  get mushafImageUrl(): string {
-    return mushafPageImageUrl(this.mushafPage);
+  get mushafViewerHref(): string {
+    return buildMushafViewerUrl(this.mushafPage);
   }
 
   get mushafSurahLabel(): string {
     if (!this.mushafSurahNumber) {
-      return '';
+      return 'Tajweed Mushaf';
     }
     return formatSurahName(this.mushafSurahNumber);
+  }
+
+  get canGoPrevMushafPage(): boolean {
+    return this.mushafPage > 1;
+  }
+
+  get canGoNextMushafPage(): boolean {
+    return this.mushafPage < this.totalMushafPages;
   }
 
   audioUrl(surahNumber: number): string {
@@ -354,22 +403,116 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
   openMushaf(surahNumber: number): void {
     this.mushafSurahNumber = surahNumber;
     this.mushafPage = startPageForSurah(surahNumber);
+    this.mushafError = '';
     this.mushafOpen = true;
+    // Wait for *ngIf canvas to mount, then render.
+    setTimeout(() => void this.renderMushafPage(), 0);
   }
 
   closeMushaf(): void {
     this.mushafOpen = false;
+    this.mushafRenderToken += 1;
   }
 
-  mushafPrev(): void {
-    if (this.mushafPage > 1) {
-      this.mushafPage -= 1;
+  async shiftMushafPage(delta: number): Promise<void> {
+    const next = Math.max(
+      1,
+      Math.min(this.totalMushafPages, this.mushafPage + delta)
+    );
+    if (next === this.mushafPage) {
+      return;
     }
+    this.mushafPage = next;
+    await this.renderMushafPage();
   }
 
-  mushafNext(): void {
-    if (this.mushafPage < TOTAL_MUSHAF_PAGES) {
-      this.mushafPage += 1;
+  private async ensurePdf(): Promise<PDFDocumentProxy> {
+    if (this.pdfDoc) {
+      return this.pdfDoc;
+    }
+    if (!this.pdfLoadPromise) {
+      this.mushafLoading = true;
+      this.mushafError = '';
+      this.pdfLoadPromise = getDocument({
+        url: MUSHAF_PDF_PATH,
+        // Range requests avoid pulling all ~123MB before the first page.
+        disableAutoFetch: true,
+        disableStream: false
+      })
+        .promise.then((doc) => {
+          this.pdfDoc = doc;
+          return doc;
+        })
+        .catch((err: unknown) => {
+          this.pdfLoadPromise = null;
+          this.mushafError =
+            'Could not load the mushaf PDF. Confirm it is in src/assets/quran/.';
+          throw err;
+        })
+        .finally(() => {
+          this.mushafLoading = false;
+        });
+    }
+    return this.pdfLoadPromise;
+  }
+
+  private async renderMushafPage(): Promise<void> {
+    if (!this.mushafOpen) {
+      return;
+    }
+    const token = ++this.mushafRenderToken;
+    this.mushafLoading = true;
+    this.mushafError = '';
+    try {
+      const doc = await this.ensurePdf();
+      if (token !== this.mushafRenderToken || !this.mushafOpen) {
+        return;
+      }
+      const canvas = this.mushafCanvasRef?.nativeElement;
+      const wrap = this.mushafPageWrapRef?.nativeElement;
+      if (!canvas || !wrap) {
+        return;
+      }
+
+      const page = await doc.getPage(this.mushafPage);
+      if (token !== this.mushafRenderToken || !this.mushafOpen) {
+        return;
+      }
+
+      const maxWidth = Math.max(320, wrap.clientWidth - 16);
+      const maxHeight = Math.max(320, wrap.clientHeight - 16);
+      const base = page.getViewport({ scale: 1 });
+      const scale = Math.min(maxWidth / base.width, maxHeight / base.height);
+      const viewport = page.getViewport({ scale });
+      const outputScale = window.devicePixelRatio || 1;
+
+      canvas.width = Math.floor(viewport.width * outputScale);
+      canvas.height = Math.floor(viewport.height * outputScale);
+      canvas.style.width = `${Math.floor(viewport.width)}px`;
+      canvas.style.height = `${Math.floor(viewport.height)}px`;
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        return;
+      }
+      const transform =
+        outputScale !== 1
+          ? ([outputScale, 0, 0, outputScale, 0, 0] as const)
+          : undefined;
+      await page.render({
+        canvasContext: ctx,
+        viewport,
+        transform: transform ? [...transform] : undefined
+      }).promise;
+    } catch {
+      if (token === this.mushafRenderToken) {
+        this.mushafError =
+          this.mushafError || 'Could not render this mushaf page.';
+      }
+    } finally {
+      if (token === this.mushafRenderToken) {
+        this.mushafLoading = false;
+      }
     }
   }
 
