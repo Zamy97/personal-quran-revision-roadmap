@@ -99,6 +99,7 @@
             class="mini sequence-button"
             *ngIf="todaySurahs.length"
             [class.active]="sequenceMode"
+            [class.playing]="sequenceMode && isAudioPlaying"
             (click)="toggleSequence()"
           >
             {{ sequenceButtonLabel }}
