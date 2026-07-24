@@ -1,12 +1,12 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  darkMode: 'class',
   content: [
     './src/**/*.{html,ts}'
   ],
   theme: {
     extend: {
       colors: {
-        // High-contrast, non-green palette
         ink: {
           DEFAULT: '#152033',
           soft: '#3d4f66',

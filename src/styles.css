@@ -24,12 +24,58 @@
     --on-brand: #f5f8ff;
     --on-brand-muted: #d0daf8;
     --today: #e7f1f8;
+    --today-pill-bg: linear-gradient(135deg, #1833a8 0%, #0f1b3d 100%);
+    --today-pill-fg: #f5f8ff;
+    --today-pill-muted: #c5d2f5;
+    --today-pill-meta: #ffb19c;
+    --sand-panel: #efe9dc;
     --shadow-panel: 0 12px 40px rgba(15, 27, 61, 0.1);
     --shadow-lift: 0 8px 24px rgba(15, 27, 61, 0.12);
     --shadow-2: 0 4px 14px rgba(15, 27, 61, 0.1);
-    /* One clear sans family everywhere — easier to read than a display serif. */
     --font-display: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
     --font-body: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+    --page-bg:
+      radial-gradient(circle at 10% -10%, rgba(77, 122, 255, 0.28), transparent 42%),
+      radial-gradient(circle at 95% 5%, rgba(255, 122, 92, 0.22), transparent 34%),
+      radial-gradient(circle at 50% 110%, rgba(168, 204, 228, 0.35), transparent 45%),
+      linear-gradient(165deg, #f4f9fc 0%, #eef3ff 45%, #fbf8f3 100%);
+  }
+
+  html.dark {
+    --ink: #e8eef8;
+    --ink-soft: #b7c3d6;
+    --muted: #8fa0b6;
+    --brand: #6b8cff;
+    --brand-deep: #dce6ff;
+    --brand-mid: #4d7aff;
+    --brand-soft: rgba(77, 122, 255, 0.16);
+    --brand-wash: rgba(77, 122, 255, 0.1);
+    --accent: #ff8a6e;
+    --accent-soft: rgba(242, 85, 53, 0.18);
+    --accent-deep: #ffb19c;
+    --accent-mid: #ff9a7d;
+    --surface: #141c2c;
+    --surface-2: #1a2438;
+    --surface-3: #223049;
+    --line: rgba(232, 238, 248, 0.12);
+    --line-strong: rgba(232, 238, 248, 0.2);
+    --on-brand: #f5f8ff;
+    --on-brand-muted: #c5d2f5;
+    --today: rgba(77, 122, 255, 0.22);
+    --today-pill-bg: linear-gradient(135deg, #2a57ef 0%, #152a66 55%, #0f1b3d 100%);
+    --today-pill-fg: #f5f8ff;
+    --today-pill-muted: #d0daf8;
+    --today-pill-meta: #ffb19c;
+    --sand-panel: #2a2430;
+    --shadow-panel: 0 12px 40px rgba(0, 0, 0, 0.35);
+    --shadow-lift: 0 8px 24px rgba(0, 0, 0, 0.3);
+    --shadow-2: 0 4px 14px rgba(0, 0, 0, 0.28);
+    --page-bg:
+      radial-gradient(circle at 10% -10%, rgba(77, 122, 255, 0.22), transparent 42%),
+      radial-gradient(circle at 95% 5%, rgba(242, 85, 53, 0.16), transparent 34%),
+      radial-gradient(circle at 50% 110%, rgba(42, 87, 239, 0.18), transparent 45%),
+      linear-gradient(165deg, #0a1228 0%, #101a2e 48%, #152033 100%);
+    color-scheme: dark;
   }
 
   html {
@@ -46,12 +92,10 @@
 
   body {
     @apply font-sans text-ink antialiased;
-    background:
-      radial-gradient(circle at 10% -10%, rgba(77, 122, 255, 0.28), transparent 42%),
-      radial-gradient(circle at 95% 5%, rgba(255, 122, 92, 0.22), transparent 34%),
-      radial-gradient(circle at 50% 110%, rgba(168, 204, 228, 0.35), transparent 45%),
-      linear-gradient(165deg, #f4f9fc 0%, #eef3ff 45%, #fbf8f3 100%);
+    color: var(--ink);
+    background: var(--page-bg);
     background-attachment: fixed;
+    transition: background 0.25s ease, color 0.25s ease;
   }
 
   @media (prefers-reduced-motion: reduce) {

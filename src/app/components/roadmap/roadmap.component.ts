@@ -67,9 +67,11 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
   /** Scroll hint for the surah list */
   showScrollHint = false;
   hiddenSurahCount = 0;
+  darkMode = false;
 
   /** Session-only Play all repeats per surah number (default 1). */
   private readonly repeatBySurah = new Map<number, number>();
+  private readonly themeStorageKey = 'quran-revision-theme';
 
   @ViewChild('player') playerRef?: ElementRef<HTMLAudioElement>;
   @ViewChild('surahList') surahListRef?: ElementRef<HTMLUListElement>;
@@ -80,6 +82,8 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
   constructor(private readonly progressService: ProgressService) {
     this.progress = this.progressService.snapshot;
     this.syncDerivedState(this.progress);
+    this.darkMode = this.readStoredTheme();
+    this.applyTheme(this.darkMode);
   }
 
   ngOnInit(): void {
@@ -91,6 +95,42 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
       this.progress = progress;
       this.syncDerivedState(progress);
     });
+  }
+
+  toggleTheme(): void {
+    this.darkMode = !this.darkMode;
+    this.applyTheme(this.darkMode);
+    try {
+      localStorage.setItem(
+        this.themeStorageKey,
+        this.darkMode ? 'dark' : 'light'
+      );
+    } catch {
+      /* ignore quota / private mode */
+    }
+    this.flash(this.darkMode ? 'Dark mode on.' : 'Light mode on.');
+  }
+
+  private readStoredTheme(): boolean {
+    try {
+      const stored = localStorage.getItem(this.themeStorageKey);
+      if (stored === 'dark') {
+        return true;
+      }
+      if (stored === 'light') {
+        return false;
+      }
+    } catch {
+      /* ignore */
+    }
+    return (
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-color-scheme: dark)').matches
+    );
+  }
+
+  private applyTheme(dark: boolean): void {
+    document.documentElement.classList.toggle('dark', dark);
   }
 
   ngAfterViewInit(): void {

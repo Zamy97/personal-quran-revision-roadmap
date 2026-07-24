@@ -55,10 +55,11 @@
 .brand h1 {
   margin: 0;
   font-family: var(--font-display);
-  font-size: clamp(1.15rem, 1.6vw, 1.45rem);
+  font-size: clamp(1.05rem, 1.5vw, 1.4rem);
   font-weight: 800;
-  line-height: 1.25;
+  line-height: 1.2;
   letter-spacing: -0.015em;
+  white-space: nowrap;
 }
 
 .brand p {
@@ -127,6 +128,11 @@
   min-height: 2rem;
   padding: 0.25rem 0.7rem;
   font-size: 0.85rem;
+}
+
+.theme-toggle {
+  min-width: 3.6rem;
+  font-weight: 700;
 }
 
 /* ---------- Workspace fills the rest of the screen ---------- */
@@ -201,7 +207,7 @@
 
 .task-card.done {
   border-color: color-mix(in srgb, var(--accent) 45%, transparent);
-  background: linear-gradient(180deg, var(--accent-soft), #ffe8e0);
+  background: linear-gradient(180deg, var(--accent-soft), color-mix(in srgb, var(--accent-soft) 70%, var(--accent-mid)));
 }
 
 .task-top {
@@ -452,7 +458,7 @@
   bottom: 0;
   height: 2.6rem;
   pointer-events: none;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.95));
+  background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--surface) 95%, transparent));
 }
 
 .scroll-more {
@@ -688,31 +694,37 @@
 
 .today-pill {
   display: grid;
-  gap: 0.12rem;
+  gap: 0.18rem;
   max-width: 48%;
-  padding: 0.5rem 0.7rem;
+  padding: 0.55rem 0.8rem;
   border-radius: 11px;
-  background: var(--brand-deep);
-  color: var(--on-brand);
+  background: var(--today-pill-bg);
+  color: var(--today-pill-fg);
+  border: 1px solid color-mix(in srgb, #85a6ff 35%, transparent);
+  box-shadow: var(--shadow-2);
 }
 
 .today-pill span {
   font-size: 0.76rem;
+  font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--on-brand-muted);
+  color: var(--today-pill-muted);
 }
 
 .today-pill strong {
   font-family: var(--font-display);
   font-size: 1rem;
-  line-height: 1.2;
+  font-weight: 800;
+  line-height: 1.25;
+  color: var(--today-pill-fg);
 }
 
 .today-pill em {
   font-style: normal;
   font-size: 0.9rem;
-  color: var(--brand-soft);
+  font-weight: 700;
+  color: var(--today-pill-meta);
 }
 
 .table-wrap {
@@ -758,6 +770,11 @@ tbody tr.is-today td {
 
 tbody tr.is-today td:first-child {
   box-shadow: inset 4px 0 0 var(--accent);
+}
+
+tbody tr.is-today .day-cell {
+  color: var(--accent-mid);
+  font-weight: 800;
 }
 
 .day-cell {
@@ -987,7 +1004,7 @@ tbody td strong {
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
-  background: #efe9dc;
+  background: var(--sand-panel);
   padding: 0.6rem;
 }
 
@@ -1014,6 +1031,16 @@ tbody td strong {
 
   .topbar {
     grid-template-columns: 1fr;
+  }
+
+  .brand {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.15rem;
+  }
+
+  .brand p {
+    white-space: normal;
   }
 
   .top-actions {
