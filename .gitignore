@@ -48,3 +48,4 @@ Thumbs.db
 
 # Large local mushaf PDF (keep on disk for ng serve; do not commit)
 /src/assets/quran/*.pdf
+/src/assets/quran/surahs/*.pdf

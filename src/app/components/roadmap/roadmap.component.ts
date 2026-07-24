@@ -17,10 +17,13 @@ import {
   isCoreManzilSurah
 } from '../../data/revision-plan';
 import {
-  MUSHAF_PDF_PATH,
   TOTAL_MUSHAF_PAGES,
+  documentPageForMushafPage,
+  endPageForSurah,
+  mushafPdfUrlForSurah,
   mushafViewerUrl as buildMushafViewerUrl,
-  startPageForSurah
+  startPageForSurah,
+  usesPerSurahPdf
 } from '../../data/mushaf-pages';
 import {
   DEFAULT_RECITER_ID,
@@ -84,6 +87,7 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly themeStorageKey = 'quran-revision-theme';
   private pdfDoc: PDFDocumentProxy | null = null;
   private pdfLoadPromise: Promise<PDFDocumentProxy> | null = null;
+  private loadedPdfUrl: string | null = null;
   private mushafRenderToken = 0;
 
   @ViewChild('player') playerRef?: ElementRef<HTMLAudioElement>;
@@ -272,7 +276,10 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   get mushafViewerHref(): string {
-    return buildMushafViewerUrl(this.mushafPage);
+    return buildMushafViewerUrl(
+      this.mushafPage,
+      this.mushafSurahNumber ?? undefined
+    );
   }
 
   get mushafSurahLabel(): string {
@@ -282,12 +289,26 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
     return formatSurahName(this.mushafSurahNumber);
   }
 
+  get mushafPageMin(): number {
+    if (usesPerSurahPdf() && this.mushafSurahNumber) {
+      return startPageForSurah(this.mushafSurahNumber);
+    }
+    return 1;
+  }
+
+  get mushafPageMax(): number {
+    if (usesPerSurahPdf() && this.mushafSurahNumber) {
+      return endPageForSurah(this.mushafSurahNumber);
+    }
+    return this.totalMushafPages;
+  }
+
   get canGoPrevMushafPage(): boolean {
-    return this.mushafPage > 1;
+    return this.mushafPage > this.mushafPageMin;
   }
 
   get canGoNextMushafPage(): boolean {
-    return this.mushafPage < this.totalMushafPages;
+    return this.mushafPage < this.mushafPageMax;
   }
 
   audioUrl(surahNumber: number): string {
@@ -416,8 +437,8 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
 
   async shiftMushafPage(delta: number): Promise<void> {
     const next = Math.max(
-      1,
-      Math.min(this.totalMushafPages, this.mushafPage + delta)
+      this.mushafPageMin,
+      Math.min(this.mushafPageMax, this.mushafPage + delta)
     );
     if (next === this.mushafPage) {
       return;
@@ -427,15 +448,30 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private async ensurePdf(): Promise<PDFDocumentProxy> {
-    if (this.pdfDoc) {
+    const surah = this.mushafSurahNumber || 1;
+    const url = mushafPdfUrlForSurah(surah);
+
+    if (this.pdfDoc && this.loadedPdfUrl === url) {
       return this.pdfDoc;
     }
+
+    if (this.pdfDoc) {
+      try {
+        await this.pdfDoc.destroy();
+      } catch {
+        /* ignore */
+      }
+      this.pdfDoc = null;
+      this.pdfLoadPromise = null;
+    }
+
     if (!this.pdfLoadPromise) {
       this.mushafLoading = true;
       this.mushafError = '';
+      this.loadedPdfUrl = url;
       this.pdfLoadPromise = getDocument({
-        url: MUSHAF_PDF_PATH,
-        // Range requests avoid pulling all ~123MB before the first page.
+        url,
+        // Range requests avoid pulling the whole file before the first page.
         disableAutoFetch: true,
         disableStream: false
       })
@@ -445,8 +481,9 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
         })
         .catch((err: unknown) => {
           this.pdfLoadPromise = null;
+          this.loadedPdfUrl = null;
           this.mushafError =
-            'Could not load the mushaf PDF. Confirm it is in src/assets/quran/.';
+            'Could not load the mushaf PDF. Check the Blob URL / local file.';
           throw err;
         })
         .finally(() => {
@@ -474,7 +511,9 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
         return;
       }
 
-      const page = await doc.getPage(this.mushafPage);
+      const surah = this.mushafSurahNumber || 1;
+      const docPage = documentPageForMushafPage(surah, this.mushafPage);
+      const page = await doc.getPage(docPage);
       if (token !== this.mushafRenderToken || !this.mushafOpen) {
         return;
       }

@@ -1,0 +1,690 @@
+{
+  "offset": 28,
+  "lastQuranPage": 632,
+  "ranges": [
+    {
+      "surah": 1,
+      "start": 29,
+      "end": 29,
+      "pages": 1
+    },
+    {
+      "surah": 2,
+      "start": 30,
+      "end": 77,
+      "pages": 48
+    },
+    {
+      "surah": 3,
+      "start": 78,
+      "end": 104,
+      "pages": 27
+    },
+    {
+      "surah": 4,
+      "start": 105,
+      "end": 133,
+      "pages": 29
+    },
+    {
+      "surah": 5,
+      "start": 134,
+      "end": 155,
+      "pages": 22
+    },
+    {
+      "surah": 6,
+      "start": 156,
+      "end": 178,
+      "pages": 23
+    },
+    {
+      "surah": 7,
+      "start": 179,
+      "end": 204,
+      "pages": 26
+    },
+    {
+      "surah": 8,
+      "start": 205,
+      "end": 214,
+      "pages": 10
+    },
+    {
+      "surah": 9,
+      "start": 215,
+      "end": 235,
+      "pages": 21
+    },
+    {
+      "surah": 10,
+      "start": 236,
+      "end": 248,
+      "pages": 13
+    },
+    {
+      "surah": 11,
+      "start": 249,
+      "end": 262,
+      "pages": 14
+    },
+    {
+      "surah": 12,
+      "start": 263,
+      "end": 276,
+      "pages": 14
+    },
+    {
+      "surah": 13,
+      "start": 277,
+      "end": 282,
+      "pages": 6
+    },
+    {
+      "surah": 14,
+      "start": 283,
+      "end": 289,
+      "pages": 7
+    },
+    {
+      "surah": 15,
+      "start": 290,
+      "end": 294,
+      "pages": 5
+    },
+    {
+      "surah": 16,
+      "start": 295,
+      "end": 309,
+      "pages": 15
+    },
+    {
+      "surah": 17,
+      "start": 310,
+      "end": 320,
+      "pages": 11
+    },
+    {
+      "surah": 18,
+      "start": 321,
+      "end": 332,
+      "pages": 12
+    },
+    {
+      "surah": 19,
+      "start": 333,
+      "end": 339,
+      "pages": 7
+    },
+    {
+      "surah": 20,
+      "start": 340,
+      "end": 349,
+      "pages": 10
+    },
+    {
+      "surah": 21,
+      "start": 350,
+      "end": 359,
+      "pages": 10
+    },
+    {
+      "surah": 22,
+      "start": 360,
+      "end": 369,
+      "pages": 10
+    },
+    {
+      "surah": 23,
+      "start": 370,
+      "end": 377,
+      "pages": 8
+    },
+    {
+      "surah": 24,
+      "start": 378,
+      "end": 386,
+      "pages": 9
+    },
+    {
+      "surah": 25,
+      "start": 387,
+      "end": 394,
+      "pages": 8
+    },
+    {
+      "surah": 26,
+      "start": 395,
+      "end": 404,
+      "pages": 10
+    },
+    {
+      "surah": 27,
+      "start": 405,
+      "end": 412,
+      "pages": 8
+    },
+    {
+      "surah": 28,
+      "start": 413,
+      "end": 423,
+      "pages": 11
+    },
+    {
+      "surah": 29,
+      "start": 424,
+      "end": 431,
+      "pages": 8
+    },
+    {
+      "surah": 30,
+      "start": 432,
+      "end": 438,
+      "pages": 7
+    },
+    {
+      "surah": 31,
+      "start": 439,
+      "end": 442,
+      "pages": 4
+    },
+    {
+      "surah": 32,
+      "start": 443,
+      "end": 445,
+      "pages": 3
+    },
+    {
+      "surah": 33,
+      "start": 446,
+      "end": 455,
+      "pages": 10
+    },
+    {
+      "surah": 34,
+      "start": 456,
+      "end": 461,
+      "pages": 6
+    },
+    {
+      "surah": 35,
+      "start": 462,
+      "end": 467,
+      "pages": 6
+    },
+    {
+      "surah": 36,
+      "start": 468,
+      "end": 473,
+      "pages": 6
+    },
+    {
+      "surah": 37,
+      "start": 474,
+      "end": 480,
+      "pages": 7
+    },
+    {
+      "surah": 38,
+      "start": 481,
+      "end": 485,
+      "pages": 5
+    },
+    {
+      "surah": 39,
+      "start": 486,
+      "end": 494,
+      "pages": 9
+    },
+    {
+      "surah": 40,
+      "start": 495,
+      "end": 504,
+      "pages": 10
+    },
+    {
+      "surah": 41,
+      "start": 505,
+      "end": 510,
+      "pages": 6
+    },
+    {
+      "surah": 42,
+      "start": 511,
+      "end": 516,
+      "pages": 6
+    },
+    {
+      "surah": 43,
+      "start": 517,
+      "end": 523,
+      "pages": 7
+    },
+    {
+      "surah": 44,
+      "start": 524,
+      "end": 526,
+      "pages": 3
+    },
+    {
+      "surah": 45,
+      "start": 527,
+      "end": 529,
+      "pages": 3
+    },
+    {
+      "surah": 46,
+      "start": 530,
+      "end": 534,
+      "pages": 5
+    },
+    {
+      "surah": 47,
+      "start": 535,
+      "end": 538,
+      "pages": 4
+    },
+    {
+      "surah": 48,
+      "start": 539,
+      "end": 542,
+      "pages": 4
+    },
+    {
+      "surah": 49,
+      "start": 543,
+      "end": 545,
+      "pages": 3
+    },
+    {
+      "surah": 50,
+      "start": 546,
+      "end": 547,
+      "pages": 2
+    },
+    {
+      "surah": 51,
+      "start": 548,
+      "end": 550,
+      "pages": 3
+    },
+    {
+      "surah": 52,
+      "start": 551,
+      "end": 553,
+      "pages": 3
+    },
+    {
+      "surah": 53,
+      "start": 554,
+      "end": 555,
+      "pages": 2
+    },
+    {
+      "surah": 54,
+      "start": 556,
+      "end": 558,
+      "pages": 3
+    },
+    {
+      "surah": 55,
+      "start": 559,
+      "end": 561,
+      "pages": 3
+    },
+    {
+      "surah": 56,
+      "start": 562,
+      "end": 564,
+      "pages": 3
+    },
+    {
+      "surah": 57,
+      "start": 565,
+      "end": 569,
+      "pages": 5
+    },
+    {
+      "surah": 58,
+      "start": 570,
+      "end": 572,
+      "pages": 3
+    },
+    {
+      "surah": 59,
+      "start": 573,
+      "end": 576,
+      "pages": 4
+    },
+    {
+      "surah": 60,
+      "start": 577,
+      "end": 578,
+      "pages": 2
+    },
+    {
+      "surah": 61,
+      "start": 579,
+      "end": 580,
+      "pages": 2
+    },
+    {
+      "surah": 62,
+      "start": 581,
+      "end": 581,
+      "pages": 1
+    },
+    {
+      "surah": 63,
+      "start": 582,
+      "end": 583,
+      "pages": 2
+    },
+    {
+      "surah": 64,
+      "start": 584,
+      "end": 585,
+      "pages": 2
+    },
+    {
+      "surah": 65,
+      "start": 586,
+      "end": 587,
+      "pages": 2
+    },
+    {
+      "surah": 66,
+      "start": 588,
+      "end": 589,
+      "pages": 2
+    },
+    {
+      "surah": 67,
+      "start": 590,
+      "end": 591,
+      "pages": 2
+    },
+    {
+      "surah": 68,
+      "start": 592,
+      "end": 593,
+      "pages": 2
+    },
+    {
+      "surah": 69,
+      "start": 594,
+      "end": 595,
+      "pages": 2
+    },
+    {
+      "surah": 70,
+      "start": 596,
+      "end": 597,
+      "pages": 2
+    },
+    {
+      "surah": 71,
+      "start": 598,
+      "end": 599,
+      "pages": 2
+    },
+    {
+      "surah": 72,
+      "start": 600,
+      "end": 601,
+      "pages": 2
+    },
+    {
+      "surah": 73,
+      "start": 602,
+      "end": 602,
+      "pages": 1
+    },
+    {
+      "surah": 74,
+      "start": 603,
+      "end": 604,
+      "pages": 2
+    },
+    {
+      "surah": 75,
+      "start": 605,
+      "end": 605,
+      "pages": 1
+    },
+    {
+      "surah": 76,
+      "start": 606,
+      "end": 607,
+      "pages": 2
+    },
+    {
+      "surah": 77,
+      "start": 608,
+      "end": 609,
+      "pages": 2
+    },
+    {
+      "surah": 78,
+      "start": 610,
+      "end": 610,
+      "pages": 1
+    },
+    {
+      "surah": 79,
+      "start": 611,
+      "end": 612,
+      "pages": 2
+    },
+    {
+      "surah": 80,
+      "start": 613,
+      "end": 613,
+      "pages": 1
+    },
+    {
+      "surah": 81,
+      "start": 614,
+      "end": 614,
+      "pages": 1
+    },
+    {
+      "surah": 82,
+      "start": 615,
+      "end": 615,
+      "pages": 1
+    },
+    {
+      "surah": 83,
+      "start": 615,
+      "end": 616,
+      "pages": 2
+    },
+    {
+      "surah": 84,
+      "start": 617,
+      "end": 617,
+      "pages": 1
+    },
+    {
+      "surah": 85,
+      "start": 618,
+      "end": 618,
+      "pages": 1
+    },
+    {
+      "surah": 86,
+      "start": 619,
+      "end": 619,
+      "pages": 1
+    },
+    {
+      "surah": 87,
+      "start": 619,
+      "end": 619,
+      "pages": 1
+    },
+    {
+      "surah": 88,
+      "start": 620,
+      "end": 620,
+      "pages": 1
+    },
+    {
+      "surah": 89,
+      "start": 621,
+      "end": 621,
+      "pages": 1
+    },
+    {
+      "surah": 90,
+      "start": 622,
+      "end": 622,
+      "pages": 1
+    },
+    {
+      "surah": 91,
+      "start": 623,
+      "end": 623,
+      "pages": 1
+    },
+    {
+      "surah": 92,
+      "start": 623,
+      "end": 623,
+      "pages": 1
+    },
+    {
+      "surah": 93,
+      "start": 624,
+      "end": 624,
+      "pages": 1
+    },
+    {
+      "surah": 94,
+      "start": 624,
+      "end": 624,
+      "pages": 1
+    },
+    {
+      "surah": 95,
+      "start": 625,
+      "end": 625,
+      "pages": 1
+    },
+    {
+      "surah": 96,
+      "start": 625,
+      "end": 625,
+      "pages": 1
+    },
+    {
+      "surah": 97,
+      "start": 626,
+      "end": 626,
+      "pages": 1
+    },
+    {
+      "surah": 98,
+      "start": 626,
+      "end": 626,
+      "pages": 1
+    },
+    {
+      "surah": 99,
+      "start": 627,
+      "end": 627,
+      "pages": 1
+    },
+    {
+      "surah": 100,
+      "start": 627,
+      "end": 627,
+      "pages": 1
+    },
+    {
+      "surah": 101,
+      "start": 628,
+      "end": 628,
+      "pages": 1
+    },
+    {
+      "surah": 102,
+      "start": 628,
+      "end": 628,
+      "pages": 1
+    },
+    {
+      "surah": 103,
+      "start": 629,
+      "end": 629,
+      "pages": 1
+    },
+    {
+      "surah": 104,
+      "start": 629,
+      "end": 629,
+      "pages": 1
+    },
+    {
+      "surah": 105,
+      "start": 629,
+      "end": 629,
+      "pages": 1
+    },
+    {
+      "surah": 106,
+      "start": 630,
+      "end": 630,
+      "pages": 1
+    },
+    {
+      "surah": 107,
+      "start": 630,
+      "end": 630,
+      "pages": 1
+    },
+    {
+      "surah": 108,
+      "start": 630,
+      "end": 630,
+      "pages": 1
+    },
+    {
+      "surah": 109,
+      "start": 631,
+      "end": 631,
+      "pages": 1
+    },
+    {
+      "surah": 110,
+      "start": 631,
+      "end": 631,
+      "pages": 1
+    },
+    {
+      "surah": 111,
+      "start": 631,
+      "end": 631,
+      "pages": 1
+    },
+    {
+      "surah": 112,
+      "start": 632,
+      "end": 632,
+      "pages": 1
+    },
+    {
+      "surah": 113,
+      "start": 632,
+      "end": 632,
+      "pages": 1
+    },
+    {
+      "surah": 114,
+      "start": 632,
+      "end": 632,
+      "pages": 1
+    }
+  ]
+}
