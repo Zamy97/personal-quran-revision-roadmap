@@ -1018,6 +1018,19 @@ tbody td strong {
   position: relative;
 }
 
+.mushaf-spread-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  padding: 0.5rem;
+}
+
+.mushaf-spread-inner.is-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
 .mushaf-canvas {
   display: block;
   max-width: 100%;
@@ -1026,9 +1039,8 @@ tbody td strong {
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
 }
 
-.mushaf-canvas.is-hidden {
-  opacity: 0;
-  pointer-events: none;
+.mushaf-spread .mushaf-canvas {
+  max-width: calc(50vw - 3rem);
 }
 
 .mushaf-status {
@@ -1041,6 +1053,7 @@ tbody td strong {
   color: #e8f0e2;
   font-size: 0.95rem;
   text-align: center;
+  z-index: 1;
 }
 
 .mushaf-status.mushaf-error {
@@ -1050,6 +1063,16 @@ tbody td strong {
 .mushaf-nav .btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+@media (max-width: 720px) {
+  .mushaf-spread .mushaf-canvas {
+    max-width: 46vw;
+  }
+
+  .mushaf-spread-inner {
+    gap: 0.35rem;
+  }
 }
 
 /* ---------- Responsive (phones: allow stacking + scroll) ---------- */

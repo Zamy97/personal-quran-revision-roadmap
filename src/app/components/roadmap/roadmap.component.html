@@ -247,7 +247,7 @@
       <div class="mushaf-toolbar">
         <div class="mushaf-meta">
           <strong>{{ mushafSurahLabel }}</strong>
-          <span>15-line Tajweed · Page {{ mushafPage }} / {{ mushafPageMax }}</span>
+          <span>15-line Tajweed · {{ mushafPageLabel }}</span>
         </div>
         <div class="mushaf-nav">
           <button
@@ -266,6 +266,14 @@
           >
             Next
           </button>
+          <button
+            type="button"
+            class="btn ghost"
+            (click)="toggleMushafTwoPage()"
+            [attr.aria-pressed]="mushafTwoPage"
+          >
+            {{ mushafTwoPage ? '1 page' : '2 pages' }}
+          </button>
           <a
             class="btn ghost mushaf-external"
             [href]="mushafViewerHref"
@@ -279,17 +287,31 @@
           </button>
         </div>
       </div>
-      <div class="mushaf-page-wrap" #mushafPageWrap>
+      <div
+        class="mushaf-page-wrap"
+        [class.mushaf-spread]="showMushafLeftPage"
+        #mushafPageWrap
+      >
         <p class="mushaf-status" *ngIf="mushafLoading">Loading page…</p>
         <p class="mushaf-status mushaf-error" *ngIf="!mushafLoading && mushafError">
           {{ mushafError }}
         </p>
-        <canvas
-          #mushafCanvas
-          class="mushaf-canvas"
+        <div
+          class="mushaf-spread-inner"
           [class.is-hidden]="mushafLoading || !!mushafError"
-          title="15-line Tajweed Quran page {{ mushafPage }}"
-        ></canvas>
+        >
+          <canvas
+            *ngIf="showMushafLeftPage"
+            #mushafCanvasLeft
+            class="mushaf-canvas mushaf-canvas-left"
+            title="Page {{ mushafPage + 1 }}"
+          ></canvas>
+          <canvas
+            #mushafCanvas
+            class="mushaf-canvas mushaf-canvas-right"
+            title="Page {{ mushafPage }}"
+          ></canvas>
+        </div>
       </div>
     </div>
   </div>

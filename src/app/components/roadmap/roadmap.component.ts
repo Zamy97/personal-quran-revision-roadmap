@@ -72,6 +72,8 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
   mushafSurahNumber: number | null = null;
   mushafLoading = false;
   mushafError = '';
+  /** Side-by-side spread (RTL: right = current, left = next). */
+  mushafTwoPage = true;
 
   /** Scroll hint for the surah list */
   showScrollHint = false;
@@ -89,6 +91,7 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('player') playerRef?: ElementRef<HTMLAudioElement>;
   @ViewChild('surahList') surahListRef?: ElementRef<HTMLUListElement>;
   @ViewChild('mushafCanvas') mushafCanvasRef?: ElementRef<HTMLCanvasElement>;
+  @ViewChild('mushafCanvasLeft') mushafCanvasLeftRef?: ElementRef<HTMLCanvasElement>;
   @ViewChild('mushafPageWrap') mushafPageWrapRef?: ElementRef<HTMLDivElement>;
 
   private sub?: Subscription;
@@ -172,12 +175,12 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
     }
     if (event.key === 'ArrowLeft' || event.key === 'PageUp') {
       event.preventDefault();
-      void this.shiftMushafPage(-1);
+      void this.shiftMushafPage(-this.mushafPageStep);
       return;
     }
     if (event.key === 'ArrowRight' || event.key === 'PageDown') {
       event.preventDefault();
-      void this.shiftMushafPage(1);
+      void this.shiftMushafPage(this.mushafPageStep);
     }
   }
 
@@ -296,12 +299,34 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
     return 1;
   }
 
+  get mushafPageStep(): number {
+    return this.mushafTwoPage ? 2 : 1;
+  }
+
+  get mushafPageLabel(): string {
+    const max = this.mushafPageMax;
+    if (this.mushafTwoPage && this.mushafPage < max) {
+      return `Pages ${this.mushafPage}–${this.mushafPage + 1} / ${max}`;
+    }
+    return `Page ${this.mushafPage} / ${max}`;
+  }
+
+  get showMushafLeftPage(): boolean {
+    return this.mushafTwoPage && this.mushafPage < this.mushafPageMax;
+  }
+
   get canGoPrevMushafPage(): boolean {
     return this.mushafPage > this.mushafPageMin;
   }
 
   get canGoNextMushafPage(): boolean {
     return this.mushafPage < this.mushafPageMax;
+  }
+
+  toggleMushafTwoPage(): void {
+    this.mushafTwoPage = !this.mushafTwoPage;
+    // Left canvas mounts via *ngIf; wait a tick before painting.
+    setTimeout(() => void this.renderMushafPage(), 0);
   }
 
   audioUrl(surahNumber: number): string {
@@ -429,9 +454,10 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   async shiftMushafPage(delta: number): Promise<void> {
+    const step = delta === 0 ? 0 : delta > 0 ? this.mushafPageStep : -this.mushafPageStep;
     const next = Math.max(
       this.mushafPageMin,
-      Math.min(this.mushafPageMax, this.mushafPage + delta)
+      Math.min(this.mushafPageMax, this.mushafPage + step)
     );
     if (next === this.mushafPage) {
       return;
@@ -498,44 +524,33 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
       if (token !== this.mushafRenderToken || !this.mushafOpen) {
         return;
       }
-      const canvas = this.mushafCanvasRef?.nativeElement;
+      const rightCanvas = this.mushafCanvasRef?.nativeElement;
+      const leftCanvas = this.mushafCanvasLeftRef?.nativeElement;
       const wrap = this.mushafPageWrapRef?.nativeElement;
-      if (!canvas || !wrap) {
+      if (!rightCanvas || !wrap) {
         return;
       }
 
       const surah = this.mushafSurahNumber || 1;
-      const docPage = documentPageForSurah(surah, this.mushafPage);
-      const page = await doc.getPage(docPage);
+      const rightPageNum = documentPageForSurah(surah, this.mushafPage);
+      const showLeft = this.showMushafLeftPage && !!leftCanvas;
+      const gap = showLeft ? 12 : 0;
+      const pageSlots = showLeft ? 2 : 1;
+      const maxWidth = Math.max(
+        160,
+        (wrap.clientWidth - 16 - gap) / pageSlots
+      );
+      const maxHeight = Math.max(320, wrap.clientHeight - 16);
+
+      await this.paintPdfPage(doc, rightPageNum, rightCanvas, maxWidth, maxHeight);
       if (token !== this.mushafRenderToken || !this.mushafOpen) {
         return;
       }
 
-      const maxWidth = Math.max(320, wrap.clientWidth - 16);
-      const maxHeight = Math.max(320, wrap.clientHeight - 16);
-      const base = page.getViewport({ scale: 1 });
-      const scale = Math.min(maxWidth / base.width, maxHeight / base.height);
-      const viewport = page.getViewport({ scale });
-      const outputScale = window.devicePixelRatio || 1;
-
-      canvas.width = Math.floor(viewport.width * outputScale);
-      canvas.height = Math.floor(viewport.height * outputScale);
-      canvas.style.width = `${Math.floor(viewport.width)}px`;
-      canvas.style.height = `${Math.floor(viewport.height)}px`;
-
-      const ctx = canvas.getContext('2d');
-      if (!ctx) {
-        return;
+      if (showLeft && leftCanvas) {
+        const leftPageNum = documentPageForSurah(surah, this.mushafPage + 1);
+        await this.paintPdfPage(doc, leftPageNum, leftCanvas, maxWidth, maxHeight);
       }
-      const transform =
-        outputScale !== 1
-          ? ([outputScale, 0, 0, outputScale, 0, 0] as const)
-          : undefined;
-      await page.render({
-        canvasContext: ctx,
-        viewport,
-        transform: transform ? [...transform] : undefined
-      }).promise;
     } catch {
       if (token === this.mushafRenderToken) {
         this.mushafError =
@@ -546,6 +561,39 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
         this.mushafLoading = false;
       }
     }
+  }
+
+  private async paintPdfPage(
+    doc: PDFDocumentProxy,
+    pageNumber: number,
+    canvas: HTMLCanvasElement,
+    maxWidth: number,
+    maxHeight: number
+  ): Promise<void> {
+    const page = await doc.getPage(pageNumber);
+    const base = page.getViewport({ scale: 1 });
+    const scale = Math.min(maxWidth / base.width, maxHeight / base.height);
+    const viewport = page.getViewport({ scale });
+    const outputScale = window.devicePixelRatio || 1;
+
+    canvas.width = Math.floor(viewport.width * outputScale);
+    canvas.height = Math.floor(viewport.height * outputScale);
+    canvas.style.width = `${Math.floor(viewport.width)}px`;
+    canvas.style.height = `${Math.floor(viewport.height)}px`;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      return;
+    }
+    const transform =
+      outputScale !== 1
+        ? ([outputScale, 0, 0, outputScale, 0, 0] as const)
+        : undefined;
+    await page.render({
+      canvasContext: ctx,
+      viewport,
+      transform: transform ? [...transform] : undefined
+    }).promise;
   }
 
   /** Phase picker hides surahs already covered by the weekly plan. */
