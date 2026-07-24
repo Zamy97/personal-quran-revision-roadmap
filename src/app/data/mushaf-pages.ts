@@ -1,18 +1,16 @@
 import { environment } from '../../environments/environment';
 
 /**
- * Tajweed Color Quran — 15 lines, 656-page PDF.
+ * Tajweed Color Quran — per-surah PDFs in /assets/quran/surahs/ (001.pdf…114.pdf).
  *
- * Anchors verified against this edition:
- *   Al-Fatiha = 29, Al-Baqarah = 30, Ad-Dukhan = 523–526
- * Other starts are interpolated from the Madinah index through those anchors.
- * Quran content ends at page 632 (pages 633–656 are back matter).
+ * Absolute page anchors (for split generation / reference only):
+ *   Al-Fatiha = 29, Al-Baqarah = 30, Ad-Dukhan = 523–526, last = 632
  */
 export const TOTAL_MUSHAF_PAGES = 656;
 export const FIRST_QURAN_PAGE = 29;
 export const LAST_QURAN_PAGE = 632;
 
-/** Absolute mushaf page where each surah begins (1-indexed; index 0 unused). */
+/** Absolute mushaf page where each surah begins (used to size each slice). */
 export const SURAH_START_PAGE: number[] = [
   0, 29, 30, 78, 105, 134, 156, 179, 205, 215, 236, 249, 263, 276, 282, 289,
   294, 309, 320, 332, 339, 349, 359, 369, 377, 386, 394, 404, 412, 423, 431,
@@ -36,19 +34,11 @@ export const SURAH_END_PAGE: number[] = [
   630, 630, 630, 631, 631, 631, 632, 632, 632
 ];
 
-const LOCAL_MUSHAF_PDF_PATH =
-  '/assets/quran/TAJWEED%20COLOR%20QURAN%20-%2015%20LINES.pdf';
+const DEFAULT_SURAH_PDF_BASE = '/assets/quran/surahs/';
 
-/** Full mushaf PDF (remote Blob or local assets). */
-export const MUSHAF_PDF_PATH =
-  (environment.mushafPdfUrl || '').trim() || LOCAL_MUSHAF_PDF_PATH;
-
-/**
- * Optional base URL for per-surah PDFs (`001.pdf` … `114.pdf`).
- * Empty = use the full mushaf PDF and jump to the surah start page.
- */
+/** Folder of 001.pdf…114.pdf (local assets or hosted CDN/Blob). */
 export const MUSHAF_SURAH_PDF_BASE = (
-  environment.mushafSurahPdfBaseUrl || ''
+  environment.mushafSurahPdfBaseUrl || DEFAULT_SURAH_PDF_BASE
 ).trim();
 
 export function startPageForSurah(surahNumber: number): number {
@@ -65,8 +55,12 @@ export function endPageForSurah(surahNumber: number): number {
   return SURAH_END_PAGE[surahNumber] || LAST_QURAN_PAGE;
 }
 
+/** Pages inside that surah’s PDF (1…N). */
 export function pageCountForSurah(surahNumber: number): number {
-  return endPageForSurah(surahNumber) - startPageForSurah(surahNumber) + 1;
+  return Math.max(
+    1,
+    endPageForSurah(surahNumber) - startPageForSurah(surahNumber) + 1
+  );
 }
 
 export function surahPdfFileName(surahNumber: number): string {
@@ -74,41 +68,32 @@ export function surahPdfFileName(surahNumber: number): string {
   return `${String(n).padStart(3, '0')}.pdf`;
 }
 
-/** PDF URL for a surah slice, or the full mushaf when base is unset. */
+/** Always loads the matching file from the surahs list. */
 export function mushafPdfUrlForSurah(surahNumber: number): string {
-  if (MUSHAF_SURAH_PDF_BASE) {
-    const base = MUSHAF_SURAH_PDF_BASE.endsWith('/')
-      ? MUSHAF_SURAH_PDF_BASE
-      : `${MUSHAF_SURAH_PDF_BASE}/`;
-    return `${base}${surahPdfFileName(surahNumber)}`;
-  }
-  return MUSHAF_PDF_PATH;
+  const base = MUSHAF_SURAH_PDF_BASE.endsWith('/')
+    ? MUSHAF_SURAH_PDF_BASE
+    : `${MUSHAF_SURAH_PDF_BASE}/`;
+  return `${base}${surahPdfFileName(surahNumber)}`;
 }
 
-/** Whether the viewer loads a single-surah PDF (page 1 = start of surah). */
-export function usesPerSurahPdf(): boolean {
-  return !!MUSHAF_SURAH_PDF_BASE;
-}
-
-/** Absolute mushaf page → page index inside the active PDF document. */
-export function documentPageForMushafPage(
+/**
+ * Page index inside the surah PDF (1-based).
+ * `pageWithinSurah` is already relative when using the surahs list.
+ */
+export function documentPageForSurah(
   surahNumber: number,
-  mushafPage: number
+  pageWithinSurah: number
 ): number {
-  if (!usesPerSurahPdf()) {
-    return Math.max(1, Math.min(TOTAL_MUSHAF_PAGES, mushafPage));
-  }
-  const start = startPageForSurah(surahNumber);
   const count = pageCountForSurah(surahNumber);
-  return Math.max(1, Math.min(count, mushafPage - start + 1));
+  return Math.max(1, Math.min(count, Math.floor(pageWithinSurah)));
 }
 
-/** Direct PDF link (browser / full screen). */
-export function mushafViewerUrl(page: number, surahNumber?: number): string {
-  if (surahNumber && usesPerSurahPdf()) {
-    const docPage = documentPageForMushafPage(surahNumber, page);
-    return `${mushafPdfUrlForSurah(surahNumber)}#page=${docPage}`;
-  }
-  const p = Math.max(1, Math.min(TOTAL_MUSHAF_PAGES, Math.floor(page)));
-  return `${MUSHAF_PDF_PATH}#page=${p}`;
+/** Direct PDF link (browser / full screen) at a page within the surah file. */
+export function mushafViewerUrl(
+  pageWithinSurah: number,
+  surahNumber?: number
+): string {
+  const surah = surahNumber && surahNumber >= 1 ? surahNumber : 1;
+  const docPage = documentPageForSurah(surah, pageWithinSurah);
+  return `${mushafPdfUrlForSurah(surah)}#page=${docPage}`;
 }

@@ -36,8 +36,7 @@
                 "glob": "**/*",
                 "input": "src/assets",
                 "ignore": [
-                  "quran/*.pdf",
-                  "quran/surahs/*.pdf"
+                  "quran/*.pdf"
                 ],
                 "output": "/assets"
               }
@@ -109,8 +108,7 @@
                 "glob": "**/*",
                 "input": "src/assets",
                 "ignore": [
-                  "quran/*.pdf",
-                  "quran/surahs/*.pdf"
+                  "quran/*.pdf"
                 ],
                 "output": "/assets"
               }

@@ -1,15 +1,7 @@
-# Local / remote mushaf PDF
+# Mushaf surahs list
 
-## Anchors (this edition)
+Open Mushaf loads `surahs/001.pdf` … `surahs/114.pdf` only (not the full 656-page PDF).
 
-- Al-Fatiha → **29**
-- Al-Baqarah → **30**
-- Ad-Dukhan → **523–526**
-- Quran text ≈ pages **29–632**
+Page labels in the viewer are **within that surah** (e.g. Dukhan → Page 1 / 4).
 
-Other surah starts are interpolated from the Madinah index through those anchors.
-
-## Per-surah splits
-
-`surahs/001.pdf` … `surahs/114.pdf` are in the repo. Open Mushaf clamps to each
-surah’s range. Production loads them via jsDelivr from GitHub.
+The full `TAJWEED COLOR QURAN - 15 LINES.pdf` stays gitignored; keep it locally if you need to re-split.

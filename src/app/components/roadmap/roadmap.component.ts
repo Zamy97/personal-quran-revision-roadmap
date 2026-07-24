@@ -17,12 +17,10 @@ import {
   isCoreManzilSurah
 } from '../../data/revision-plan';
 import {
-  TOTAL_MUSHAF_PAGES,
-  documentPageForMushafPage,
-  endPageForSurah,
+  documentPageForSurah,
   mushafPdfUrlForSurah,
   mushafViewerUrl as buildMushafViewerUrl,
-  startPageForSurah
+  pageCountForSurah
 } from '../../data/mushaf-pages';
 import {
   DEFAULT_RECITER_ID,
@@ -52,7 +50,6 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly surahLabel = surahLabel;
   readonly totalTasks = DAILY_BLUEPRINT.length;
   readonly reciters = RECITERS;
-  readonly totalMushafPages = TOTAL_MUSHAF_PAGES;
 
   progress: MemorizationProgress;
   todayLabel = '';
@@ -289,17 +286,14 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   get mushafPageMin(): number {
-    if (this.mushafSurahNumber) {
-      return startPageForSurah(this.mushafSurahNumber);
-    }
     return 1;
   }
 
   get mushafPageMax(): number {
     if (this.mushafSurahNumber) {
-      return endPageForSurah(this.mushafSurahNumber);
+      return pageCountForSurah(this.mushafSurahNumber);
     }
-    return this.totalMushafPages;
+    return 1;
   }
 
   get canGoPrevMushafPage(): boolean {
@@ -422,7 +416,7 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
 
   openMushaf(surahNumber: number): void {
     this.mushafSurahNumber = surahNumber;
-    this.mushafPage = startPageForSurah(surahNumber);
+    this.mushafPage = 1;
     this.mushafError = '';
     this.mushafOpen = true;
     // Wait for *ngIf canvas to mount, then render.
@@ -511,7 +505,7 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
       }
 
       const surah = this.mushafSurahNumber || 1;
-      const docPage = documentPageForMushafPage(surah, this.mushafPage);
+      const docPage = documentPageForSurah(surah, this.mushafPage);
       const page = await doc.getPage(docPage);
       if (token !== this.mushafRenderToken || !this.mushafOpen) {
         return;
