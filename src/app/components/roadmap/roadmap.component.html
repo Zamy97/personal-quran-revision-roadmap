@@ -133,6 +133,7 @@
           (play)="onAudioPlay()"
           (pause)="onAudioPause()"
           (ended)="onAudioEnded()"
+          (timeupdate)="onAudioTimeUpdate()"
         ></audio>
 
         <div class="list-wrap" *ngIf="todaySurahs.length; else bufferNote">
@@ -273,6 +274,15 @@
             [attr.aria-pressed]="mushafTwoPage"
           >
             {{ mushafTwoPage ? '1 page' : '2 pages' }}
+          </button>
+          <button
+            type="button"
+            class="btn ghost"
+            (click)="toggleMushafFollowAudio()"
+            [attr.aria-pressed]="mushafFollowAudio"
+            title="Flip mushaf pages as audio plays (estimated from track progress)"
+          >
+            {{ mushafFollowAudio ? 'Follow on' : 'Follow off' }}
           </button>
           <a
             class="btn ghost mushaf-external"

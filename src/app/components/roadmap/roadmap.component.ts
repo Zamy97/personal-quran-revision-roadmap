@@ -74,6 +74,10 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
   mushafError = '';
   /** Side-by-side spread (RTL: right = current, left = next). */
   mushafTwoPage = true;
+  /** Keep mushaf open and flip pages while audio plays. */
+  mushafFollowAudio = true;
+  private mushafFollowSuspended = false;
+  private lastFollowSyncedPage: number | null = null;
 
   /** Scroll hint for the surah list */
   showScrollHint = false;
@@ -329,6 +333,15 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
     setTimeout(() => void this.renderMushafPage(), 0);
   }
 
+  toggleMushafFollowAudio(): void {
+    this.mushafFollowAudio = !this.mushafFollowAudio;
+    if (this.mushafFollowAudio && this.playingSurah != null) {
+      this.mushafFollowSuspended = false;
+      this.ensureMushafFollowsSurah(this.playingSurah);
+      this.onAudioTimeUpdate();
+    }
+  }
+
   audioUrl(surahNumber: number): string {
     return getReciter(this.selectedReciterId).audioUrl(surahNumber);
   }
@@ -393,10 +406,49 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
 
   onAudioPlay(): void {
     this.isAudioPlaying = true;
+    if (this.mushafFollowAudio && this.playingSurah != null) {
+      this.ensureMushafFollowsSurah(this.playingSurah);
+    }
   }
 
   onAudioPause(): void {
     this.isAudioPlaying = false;
+  }
+
+  onAudioTimeUpdate(): void {
+    if (!this.mushafFollowAudio || this.mushafFollowSuspended) {
+      return;
+    }
+    if (!this.mushafOpen || this.playingSurah == null) {
+      return;
+    }
+    if (this.mushafSurahNumber !== this.playingSurah) {
+      return;
+    }
+    const audio = this.playerRef?.nativeElement;
+    if (!audio || !audio.duration || !isFinite(audio.duration) || audio.duration <= 0) {
+      return;
+    }
+    const pageCount = pageCountForSurah(this.playingSurah);
+    const progress = Math.min(1, Math.max(0, audio.currentTime / audio.duration));
+    // Map playback position onto surah pages (no ayah timestamps available).
+    let page = Math.min(
+      pageCount,
+      Math.max(1, Math.floor(progress * pageCount) + 1)
+    );
+    if (this.mushafTwoPage && pageCount > 1) {
+      // Keep spreads on odd starts: 1–2, 3–4, …
+      page = page % 2 === 0 ? page - 1 : page;
+      page = Math.max(1, page);
+    }
+    if (page === this.lastFollowSyncedPage && page === this.mushafPage) {
+      return;
+    }
+    this.lastFollowSyncedPage = page;
+    if (page !== this.mushafPage) {
+      this.mushafPage = page;
+      void this.renderMushafPage();
+    }
   }
 
   onAudioEnded(): void {
@@ -451,6 +503,10 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
   closeMushaf(): void {
     this.mushafOpen = false;
     this.mushafRenderToken += 1;
+    // Closing while listening pauses auto-follow until the next play.
+    if (this.isAudioPlaying || this.playingSurah != null) {
+      this.mushafFollowSuspended = true;
+    }
   }
 
   async shiftMushafPage(delta: number): Promise<void> {
@@ -712,10 +768,31 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
     }
     audio.src = this.audioUrl(surahNumber);
     this.playingSurah = surahNumber;
+    this.lastFollowSyncedPage = null;
+    if (this.mushafFollowAudio) {
+      this.mushafFollowSuspended = false;
+      this.ensureMushafFollowsSurah(surahNumber);
+    }
     audio.play().catch(() => {
       this.isAudioPlaying = false;
       this.flash('Could not play audio — check your connection.');
     });
+  }
+
+  /** Open (or switch) mushaf to the surah currently playing. */
+  private ensureMushafFollowsSurah(surahNumber: number): void {
+    if (this.mushafFollowSuspended) {
+      return;
+    }
+    if (this.mushafOpen && this.mushafSurahNumber === surahNumber) {
+      return;
+    }
+    this.mushafSurahNumber = surahNumber;
+    this.mushafPage = 1;
+    this.mushafError = '';
+    this.mushafOpen = true;
+    this.lastFollowSyncedPage = 1;
+    setTimeout(() => void this.renderMushafPage(), 0);
   }
 
   private scrollPlayingSurahIntoView(): void {
