@@ -6,7 +6,8 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "upload:mushaf": "node scripts/upload-mushaf.mjs"
   },
   "private": true,
   "dependencies": {
@@ -28,6 +29,7 @@
     "@angular/cli": "^17.0.7",
     "@angular/compiler-cli": "^17.0.0",
     "@types/jasmine": "~5.1.0",
+    "@vercel/blob": "^2.6.1",
     "autoprefixer": "^10.5.4",
     "jasmine-core": "~5.1.0",
     "karma": "~6.4.0",
