@@ -46,6 +46,6 @@ Thumbs.db
 .env.*
 !.env.example
 
-# Large local mushaf PDF (keep on disk for ng serve; do not commit)
+# Large full mushaf PDF only (123MB — over GitHub’s 100MB file limit)
 /src/assets/quran/*.pdf
-/src/assets/quran/surahs/*.pdf
+# Per-surah slices under surahs/ are committed (each well under 25MB)

@@ -6,16 +6,10 @@
 - Al-Baqarah → page **30**/656  
 - Quran text ≈ pages **29–632** (Madinah index + 28)
 
-## Per-surah splits (local)
+## Per-surah splits
 
-`surahs/001.pdf` … `surahs/114.pdf` (~108MB total) are generated locally and
-**gitignored**. Upload them to Blob when you want faster per-chapter loads:
+`surahs/001.pdf` … `surahs/114.pdf` are in the repo (largest ~8MB).
 
-```bash
-export BLOB_READ_WRITE_TOKEN='…'
-npm run upload:mushaf-surahs
-```
+Open Mushaf clamps Prev/Next to that surah’s page range (e.g. As-Sajdah stops at its last page).
 
-Then set `mushafSurahPdfBaseUrl` in `environment.prod.ts` to the printed folder URL.
-
-Until then, the app uses the full Blob PDF with the corrected surah start pages.
+Optional: set `mushafSurahPdfBaseUrl` to load each slice instead of the full Blob PDF.

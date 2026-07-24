@@ -22,8 +22,7 @@ import {
   endPageForSurah,
   mushafPdfUrlForSurah,
   mushafViewerUrl as buildMushafViewerUrl,
-  startPageForSurah,
-  usesPerSurahPdf
+  startPageForSurah
 } from '../../data/mushaf-pages';
 import {
   DEFAULT_RECITER_ID,
@@ -290,14 +289,14 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   get mushafPageMin(): number {
-    if (usesPerSurahPdf() && this.mushafSurahNumber) {
+    if (this.mushafSurahNumber) {
       return startPageForSurah(this.mushafSurahNumber);
     }
     return 1;
   }
 
   get mushafPageMax(): number {
-    if (usesPerSurahPdf() && this.mushafSurahNumber) {
+    if (this.mushafSurahNumber) {
       return endPageForSurah(this.mushafSurahNumber);
     }
     return this.totalMushafPages;
