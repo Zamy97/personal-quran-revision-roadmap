@@ -2,14 +2,14 @@
 
 ## Anchors (this edition)
 
-- Al-Fatiha → page **29**/656  
-- Al-Baqarah → page **30**/656  
-- Quran text ≈ pages **29–632** (Madinah index + 28)
+- Al-Fatiha → **29**
+- Al-Baqarah → **30**
+- Ad-Dukhan → **523–526**
+- Quran text ≈ pages **29–632**
+
+Other surah starts are interpolated from the Madinah index through those anchors.
 
 ## Per-surah splits
 
-`surahs/001.pdf` … `surahs/114.pdf` are in the repo (largest ~8MB).
-
-Open Mushaf clamps Prev/Next to that surah’s page range (e.g. As-Sajdah stops at its last page).
-
-Optional: set `mushafSurahPdfBaseUrl` to load each slice instead of the full Blob PDF.
+`surahs/001.pdf` … `surahs/114.pdf` are in the repo. Open Mushaf clamps to each
+surah’s range. Production loads them via jsDelivr from GitHub.
