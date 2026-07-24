@@ -1,7 +1,7 @@
-# Mushaf surahs list
+# Mushaf surah page map
 
-Open Mushaf loads `surahs/001.pdf` … `surahs/114.pdf` only (not the full 656-page PDF).
+All 114 ranges were verified manually against this edition (PDF pages **29–638**).
 
-Page labels in the viewer are **within that surah** (e.g. Dukhan → Page 1 / 4).
+Open Mushaf loads `surahs/001.pdf` … `surahs/114.pdf` with pages **1 / N** inside each file.
 
-The full `TAJWEED COLOR QURAN - 15 LINES.pdf` stays gitignored; keep it locally if you need to re-split.
+Source list: `surah-page-overrides.json`
