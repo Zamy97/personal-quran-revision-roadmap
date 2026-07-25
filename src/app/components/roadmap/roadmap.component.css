@@ -405,6 +405,13 @@
   flex: 0 0 auto;
 }
 
+.listen-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex: 0 0 auto;
+}
+
 .reciter-field > span {
   font-size: 0.82rem;
   letter-spacing: 0.05em;
@@ -775,6 +782,39 @@ tbody tr.is-today td:first-child {
 tbody tr.is-today .day-cell {
   color: var(--accent-mid);
   font-weight: 800;
+}
+
+tbody tr[role='button'] {
+  cursor: pointer;
+}
+
+tbody tr[role='button']:hover td {
+  background: color-mix(in srgb, var(--brand-soft) 55%, var(--surface));
+}
+
+tbody tr.is-today[role='button']:hover td {
+  background: color-mix(in srgb, var(--today) 80%, var(--brand-soft));
+}
+
+tbody tr.is-selected td {
+  background: color-mix(in srgb, var(--brand-soft) 70%, var(--surface));
+}
+
+tbody tr.is-selected td:first-child {
+  box-shadow: inset 4px 0 0 var(--brand);
+}
+
+tbody tr.is-selected .day-cell {
+  color: var(--brand-deep);
+  font-weight: 800;
+}
+
+tbody tr.is-today.is-selected td {
+  background: var(--today);
+}
+
+tbody tr.is-today.is-selected td:first-child {
+  box-shadow: inset 4px 0 0 var(--accent);
 }
 
 .day-cell {

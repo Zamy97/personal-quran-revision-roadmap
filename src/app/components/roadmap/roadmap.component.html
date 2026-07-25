@@ -100,8 +100,11 @@
       <div class="listen-panel">
         <div class="listen-head">
           <div>
-            <h3>Listen &amp; Mushaf — Today</h3>
-            <span>{{ todayManzil.day }} · Quran order · × applies to Listen &amp; Play all</span>
+            <h3>Listen &amp; Mushaf</h3>
+            <span>
+              {{ selectedManzil.day }}{{ isViewingToday ? ' (today)' : '' }}
+              · Quran order · × applies to Listen &amp; Play all
+            </span>
           </div>
           <button
             type="button"
@@ -115,15 +118,30 @@
           </button>
         </div>
 
-        <label class="reciter-field">
-          <span>Reciter</span>
-          <select
-            [ngModel]="selectedReciterId"
-            (ngModelChange)="onReciterChange($event)"
-          >
-            <option *ngFor="let r of reciters" [ngValue]="r.id">{{ r.label }}</option>
-          </select>
-        </label>
+        <div class="listen-controls">
+          <label class="reciter-field day-field">
+            <span>Day</span>
+            <select
+              [ngModel]="selectedManzil.dayIndex"
+              (ngModelChange)="onRevisionDayChange($event)"
+            >
+              <option *ngFor="let day of manzilLoop" [ngValue]="day.dayIndex">
+                {{ day.day }}{{ day.dayIndex === todayManzil.dayIndex ? ' · today' : '' }}
+                — {{ day.focusTitle }}
+              </option>
+            </select>
+          </label>
+
+          <label class="reciter-field">
+            <span>Reciter</span>
+            <select
+              [ngModel]="selectedReciterId"
+              (ngModelChange)="onReciterChange($event)"
+            >
+              <option *ngFor="let r of reciters" [ngValue]="r.id">{{ r.label }}</option>
+            </select>
+          </label>
+        </div>
 
         <audio
           #player
@@ -192,7 +210,7 @@
       <div class="manzil-head">
         <div>
           <h2 id="manzil-heading">Day-by-Day Revision Focus</h2>
-          <p>3-day loop, twice a week · every surah seen ≥2×/week</p>
+          <p>3-day loop, twice a week · click a day to listen / revise that set</p>
         </div>
         <div class="today-pill">
           <span>Today</span>
@@ -213,7 +231,15 @@
           <tbody>
             <tr
               *ngFor="let day of manzilLoop"
-              [class.is-today]="day.day === todayWeekday"
+              [class.is-today]="day.dayIndex === todayManzil.dayIndex"
+              [class.is-selected]="day.dayIndex === selectedManzil.dayIndex"
+              (click)="selectRevisionDay(day)"
+              (keydown.enter)="selectRevisionDay(day)"
+              (keydown.space)="$event.preventDefault(); selectRevisionDay(day)"
+              tabindex="0"
+              role="button"
+              [attr.aria-pressed]="day.dayIndex === selectedManzil.dayIndex"
+              [attr.aria-label]="'Load ' + day.day + ' revision surahs'"
             >
               <td class="day-cell">{{ day.day.slice(0, 3) }}</td>
               <td>

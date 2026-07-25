@@ -54,7 +54,13 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
   progress: MemorizationProgress;
   todayLabel = '';
   todayWeekday = '';
+  /** Calendar weekday’s manzil (always “today”). */
   todayManzil!: ManzilDay;
+  /**
+   * Manzil shown in Listen / Play all. Defaults to today; session-only
+   * (reload always lands on the calendar day again).
+   */
+  selectedManzil!: ManzilDay;
   ayahOptions: number[] = [];
   statusMessage = '';
   playingSurah: number | null = null;
@@ -113,6 +119,7 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
     this.todayManzil =
       this.manzilLoop.find((d) => d.dayIndex === new Date().getDay()) ||
       this.manzilLoop[6];
+    this.selectedManzil = this.todayManzil;
     this.sub = this.progressService.progress$.subscribe((progress) => {
       this.progress = progress;
       this.syncDerivedState(progress);
@@ -236,13 +243,52 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
     return !!surah && this.progress.currentAyah >= surah.ayahCount;
   }
 
-  /** Surahs scheduled for today's manzil, for the listen / mushaf panel. */
+  /** Surahs for the selected manzil day (Listen / Play all / Mushaf list). */
   get todaySurahs(): Surah[] {
-    const numbers = this.todayManzil?.surahNumbers ?? [];
+    const numbers = this.selectedManzil?.surahNumbers ?? [];
     return numbers
       .map((n) => getSurah(n))
       .filter((s): s is Surah => !!s)
       .sort((a, b) => a.number - b.number);
+  }
+
+  get isViewingToday(): boolean {
+    return this.selectedManzil?.dayIndex === this.todayManzil?.dayIndex;
+  }
+
+  /** Switch which day’s surahs appear in Listen / Play all (not persisted). */
+  selectRevisionDay(day: ManzilDay): void {
+    if (day.dayIndex === this.selectedManzil?.dayIndex) {
+      return;
+    }
+    this.stopPlaybackForDayChange();
+    this.selectedManzil = day;
+    this.flash(
+      this.isViewingToday
+        ? `Back to today’s revision (${day.day}).`
+        : `Viewing ${day.day}’s revision.`
+    );
+    queueMicrotask(() => this.updateScrollHint());
+  }
+
+  onRevisionDayChange(dayIndex: number): void {
+    const day =
+      this.manzilLoop.find((d) => d.dayIndex === Number(dayIndex)) ||
+      this.todayManzil;
+    this.selectRevisionDay(day);
+  }
+
+  private stopPlaybackForDayChange(): void {
+    const audio = this.playerRef?.nativeElement;
+    if (audio) {
+      audio.pause();
+      audio.removeAttribute('src');
+      audio.load();
+    }
+    this.sequenceMode = false;
+    this.sequenceRep = 1;
+    this.playingSurah = null;
+    this.isAudioPlaying = false;
   }
 
   get sequenceButtonLabel(): string {
@@ -488,7 +534,11 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
 
     this.sequenceMode = false;
     this.playingSurah = null;
-    this.flash('Today’s revision sequence is complete.');
+    this.flash(
+      this.isViewingToday
+        ? 'Today’s revision sequence is complete.'
+        : `${this.selectedManzil.day}’s revision sequence is complete.`
+    );
   }
 
   openMushaf(surahNumber: number): void {
