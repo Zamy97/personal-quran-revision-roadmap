@@ -31,12 +31,13 @@ import { SURAHS, Surah, formatSurahName, getSurah, surahLabel } from '../../data
 import { MemorizationProgress } from '../../models/progress.model';
 import { ProgressService } from '../../services/progress.service';
 import {
-  GlobalWorkerOptions,
   PDFDocumentProxy,
+  RenderTask,
   getDocument
 } from 'pdfjs-dist';
+import { configurePdfWorker } from '../../pdf-worker';
 
-GlobalWorkerOptions.workerSrc = '/assets/quran/pdf.worker.min.mjs';
+configurePdfWorker();
 
 @Component({
   selector: 'app-roadmap',
@@ -97,6 +98,9 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
   private pdfLoadPromise: Promise<PDFDocumentProxy> | null = null;
   private loadedPdfUrl: string | null = null;
   private mushafRenderToken = 0;
+  private rightRenderTask: RenderTask | null = null;
+  private leftRenderTask: RenderTask | null = null;
+  private mushafDomRetry = 0;
 
   @ViewChild('player') playerRef?: ElementRef<HTMLAudioElement>;
   @ViewChild('surahList') surahListRef?: ElementRef<HTMLUListElement>;
@@ -186,12 +190,12 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
     }
     if (event.key === 'ArrowLeft' || event.key === 'PageUp') {
       event.preventDefault();
-      void this.shiftMushafPage(-this.mushafPageStep);
+      void this.shiftMushafPage(-1);
       return;
     }
     if (event.key === 'ArrowRight' || event.key === 'PageDown') {
       event.preventDefault();
-      void this.shiftMushafPage(this.mushafPageStep);
+      void this.shiftMushafPage(1);
     }
   }
 
@@ -355,7 +359,7 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
 
   get mushafPageLabel(): string {
     const max = this.mushafPageMax;
-    if (this.mushafTwoPage && this.mushafPage < max) {
+    if (this.showMushafLeftPage) {
       return `Pages ${this.mushafPage}–${this.mushafPage + 1} / ${max}`;
     }
     return `Page ${this.mushafPage} / ${max}`;
@@ -370,16 +374,45 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   get canGoNextMushafPage(): boolean {
+    if (this.mushafTwoPage) {
+      // Next spread start, or the final single page after the last pair.
+      return this.mushafPage + 1 < this.mushafPageMax;
+    }
     return this.mushafPage < this.mushafPageMax;
+  }
+
+  get mushafFollowLabel(): string {
+    if (!this.mushafFollowAudio) {
+      return 'Follow along off';
+    }
+    if (this.mushafFollowSuspended) {
+      return 'Follow along paused';
+    }
+    return 'Follow along on';
+  }
+
+  get isMushafFollowPressed(): boolean {
+    return this.mushafFollowAudio && !this.mushafFollowSuspended;
   }
 
   toggleMushafTwoPage(): void {
     this.mushafTwoPage = !this.mushafTwoPage;
-    // Left canvas mounts via *ngIf; wait a tick before painting.
-    setTimeout(() => void this.renderMushafPage(), 0);
+    this.mushafPage = this.normalizeMushafPage(this.mushafPage);
+    this.lastFollowSyncedPage = null;
+    this.scheduleMushafRender();
   }
 
   toggleMushafFollowAudio(): void {
+    // Resume a paused follow-along without turning the preference off.
+    if (this.mushafFollowAudio && this.mushafFollowSuspended) {
+      this.mushafFollowSuspended = false;
+      if (this.playingSurah != null) {
+        this.ensureMushafFollowsSurah(this.playingSurah);
+        this.onAudioTimeUpdate();
+      }
+      return;
+    }
+
     this.mushafFollowAudio = !this.mushafFollowAudio;
     if (this.mushafFollowAudio && this.playingSurah != null) {
       this.mushafFollowSuspended = false;
@@ -482,18 +515,14 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
       pageCount,
       Math.max(1, Math.floor(progress * pageCount) + 1)
     );
-    if (this.mushafTwoPage && pageCount > 1) {
-      // Keep spreads on odd starts: 1–2, 3–4, …
-      page = page % 2 === 0 ? page - 1 : page;
-      page = Math.max(1, page);
-    }
+    page = this.normalizeMushafPage(page);
     if (page === this.lastFollowSyncedPage && page === this.mushafPage) {
       return;
     }
     this.lastFollowSyncedPage = page;
     if (page !== this.mushafPage) {
       this.mushafPage = page;
-      void this.renderMushafPage();
+      this.scheduleMushafRender();
     }
   }
 
@@ -543,16 +572,17 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
 
   openMushaf(surahNumber: number): void {
     this.mushafSurahNumber = surahNumber;
-    this.mushafPage = 1;
+    this.mushafPage = this.normalizeMushafPage(1);
     this.mushafError = '';
     this.mushafOpen = true;
-    // Wait for *ngIf canvas to mount, then render.
-    setTimeout(() => void this.renderMushafPage(), 0);
+    this.lastFollowSyncedPage = null;
+    this.scheduleMushafRender();
   }
 
   closeMushaf(): void {
     this.mushafOpen = false;
     this.mushafRenderToken += 1;
+    void this.cancelMushafRenders();
     // Closing while listening pauses auto-follow until the next play.
     if (this.isAudioPlaying || this.playingSurah != null) {
       this.mushafFollowSuspended = true;
@@ -560,16 +590,56 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   async shiftMushafPage(delta: number): Promise<void> {
-    const step = delta === 0 ? 0 : delta > 0 ? this.mushafPageStep : -this.mushafPageStep;
-    const next = Math.max(
-      this.mushafPageMin,
-      Math.min(this.mushafPageMax, this.mushafPage + step)
-    );
+    if (delta === 0) {
+      return;
+    }
+    const step = this.mushafPageStep;
+    const direction = delta > 0 ? 1 : -1;
+    let next = this.mushafPage + direction * step;
+
+    if (direction > 0 && this.mushafTwoPage) {
+      // From last full spread, land on the final leftover page when odd count.
+      const max = this.mushafPageMax;
+      if (this.mushafPage < max && next > max) {
+        next = max;
+      }
+    }
+
+    next = this.normalizeMushafPage(next);
     if (next === this.mushafPage) {
       return;
     }
+
+    // Manual flip pauses follow-along so audio sync doesn't yank the page back.
+    if (this.mushafFollowAudio) {
+      this.mushafFollowSuspended = true;
+    }
     this.mushafPage = next;
+    this.lastFollowSyncedPage = next;
     await this.renderMushafPage();
+  }
+
+  /**
+   * Keep two-page mode on odd right-hand starts (1–2, 3–4, …).
+   * The last page alone is allowed when the surah has an odd page count.
+   */
+  private normalizeMushafPage(page: number): number {
+    const min = this.mushafPageMin;
+    const max = this.mushafPageMax;
+    let p = Math.max(min, Math.min(max, Math.floor(page) || min));
+    if (this.mushafTwoPage && max > 1 && p < max && p % 2 === 0) {
+      p -= 1;
+    }
+    return Math.max(min, Math.min(max, p));
+  }
+
+  private scheduleMushafRender(): void {
+    // Double rAF: wait for *ngIf left canvas / layout after mode toggles.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        void this.renderMushafPage();
+      });
+    });
   }
 
   private async ensurePdf(): Promise<PDFDocumentProxy> {
@@ -625,6 +695,7 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
     const token = ++this.mushafRenderToken;
     this.mushafLoading = true;
     this.mushafError = '';
+    let waitingForDom = false;
     try {
       const doc = await this.ensurePdf();
       if (token !== this.mushafRenderToken || !this.mushafOpen) {
@@ -634,10 +705,31 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
       const leftCanvas = this.mushafCanvasLeftRef?.nativeElement;
       const wrap = this.mushafPageWrapRef?.nativeElement;
       if (!rightCanvas || !wrap) {
+        if (this.mushafDomRetry < 8) {
+          this.mushafDomRetry += 1;
+          waitingForDom = true;
+          this.scheduleMushafRender();
+        } else {
+          this.mushafError = 'Could not render this mushaf page.';
+        }
         return;
       }
 
+      // Left canvas mounts via *ngIf when entering spread mode — wait for it.
+      if (this.showMushafLeftPage && !leftCanvas) {
+        if (this.mushafDomRetry < 8) {
+          this.mushafDomRetry += 1;
+          waitingForDom = true;
+          this.scheduleMushafRender();
+        } else {
+          this.mushafError = 'Could not render this mushaf page.';
+        }
+        return;
+      }
+      this.mushafDomRetry = 0;
+
       const surah = this.mushafSurahNumber || 1;
+      this.mushafPage = this.normalizeMushafPage(this.mushafPage);
       const rightPageNum = documentPageForSurah(surah, this.mushafPage);
       const showLeft = this.showMushafLeftPage && !!leftCanvas;
       const gap = showLeft ? 12 : 0;
@@ -648,14 +740,30 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
       );
       const maxHeight = Math.max(320, wrap.clientHeight - 16);
 
-      await this.paintPdfPage(doc, rightPageNum, rightCanvas, maxWidth, maxHeight);
+      await this.paintPdfPage(
+        doc,
+        rightPageNum,
+        rightCanvas,
+        maxWidth,
+        maxHeight,
+        'right'
+      );
       if (token !== this.mushafRenderToken || !this.mushafOpen) {
         return;
       }
 
       if (showLeft && leftCanvas) {
         const leftPageNum = documentPageForSurah(surah, this.mushafPage + 1);
-        await this.paintPdfPage(doc, leftPageNum, leftCanvas, maxWidth, maxHeight);
+        await this.paintPdfPage(
+          doc,
+          leftPageNum,
+          leftCanvas,
+          maxWidth,
+          maxHeight,
+          'left'
+        );
+      } else {
+        await this.cancelRenderSide('left');
       }
     } catch {
       if (token === this.mushafRenderToken) {
@@ -663,9 +771,35 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
           this.mushafError || 'Could not render this mushaf page.';
       }
     } finally {
-      if (token === this.mushafRenderToken) {
+      if (token === this.mushafRenderToken && !waitingForDom) {
         this.mushafLoading = false;
       }
+    }
+  }
+
+  private async cancelMushafRenders(): Promise<void> {
+    await Promise.all([
+      this.cancelRenderSide('right'),
+      this.cancelRenderSide('left')
+    ]);
+  }
+
+  private async cancelRenderSide(side: 'left' | 'right'): Promise<void> {
+    const task =
+      side === 'left' ? this.leftRenderTask : this.rightRenderTask;
+    if (side === 'left') {
+      this.leftRenderTask = null;
+    } else {
+      this.rightRenderTask = null;
+    }
+    if (!task) {
+      return;
+    }
+    try {
+      task.cancel();
+      await task.promise.catch(() => undefined);
+    } catch {
+      /* ignore cancel races */
     }
   }
 
@@ -674,8 +808,11 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
     pageNumber: number,
     canvas: HTMLCanvasElement,
     maxWidth: number,
-    maxHeight: number
+    maxHeight: number,
+    side: 'left' | 'right'
   ): Promise<void> {
+    await this.cancelRenderSide(side);
+
     const page = await doc.getPage(pageNumber);
     const base = page.getViewport({ scale: 1 });
     const scale = Math.min(maxWidth / base.width, maxHeight / base.height);
@@ -691,15 +828,42 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
     if (!ctx) {
       return;
     }
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
     const transform =
       outputScale !== 1
         ? ([outputScale, 0, 0, outputScale, 0, 0] as const)
         : undefined;
-    await page.render({
+    const task = page.render({
       canvasContext: ctx,
       viewport,
       transform: transform ? [...transform] : undefined
-    }).promise;
+    });
+    if (side === 'left') {
+      this.leftRenderTask = task;
+    } else {
+      this.rightRenderTask = task;
+    }
+    try {
+      await task.promise;
+    } catch (err: unknown) {
+      // PDF.js rejects cancelled renders — ignore those.
+      const name =
+        err && typeof err === 'object' && 'name' in err
+          ? String((err as { name: string }).name)
+          : '';
+      if (name !== 'RenderingCancelledException') {
+        throw err;
+      }
+    } finally {
+      if (side === 'left' && this.leftRenderTask === task) {
+        this.leftRenderTask = null;
+      }
+      if (side === 'right' && this.rightRenderTask === task) {
+        this.rightRenderTask = null;
+      }
+    }
   }
 
   /** Phase picker hides surahs already covered by the weekly plan. */
@@ -838,11 +1002,11 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
     this.mushafSurahNumber = surahNumber;
-    this.mushafPage = 1;
+    this.mushafPage = this.normalizeMushafPage(1);
     this.mushafError = '';
     this.mushafOpen = true;
-    this.lastFollowSyncedPage = 1;
-    setTimeout(() => void this.renderMushafPage(), 0);
+    this.lastFollowSyncedPage = this.mushafPage;
+    this.scheduleMushafRender();
   }
 
   private scrollPlayingSurahIntoView(): void {

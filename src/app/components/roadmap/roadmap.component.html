@@ -305,10 +305,10 @@
             type="button"
             class="btn ghost"
             (click)="toggleMushafFollowAudio()"
-            [attr.aria-pressed]="mushafFollowAudio"
+            [attr.aria-pressed]="isMushafFollowPressed"
             title="Flip mushaf pages as audio plays (estimated from track progress)"
           >
-            {{ mushafFollowAudio ? 'Follow on' : 'Follow off' }}
+            {{ mushafFollowLabel }}
           </button>
           <a
             class="btn ghost mushaf-external"

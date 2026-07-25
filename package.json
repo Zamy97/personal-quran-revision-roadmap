@@ -2,13 +2,13 @@
   "name": "quran-revision-roadmap",
   "version": "0.0.0",
   "scripts": {
-    "ng": "ng",
-    "start": "ng serve",
-    "build": "ng build",
-    "watch": "ng build --watch --configuration development",
-    "test": "ng test",
-    "upload:mushaf": "node scripts/upload-mushaf.mjs",
-    "upload:mushaf-surahs": "node scripts/upload-mushaf-surahs.mjs"
+    "ng": "bash scripts/with-node-lts.sh ng",
+    "start": "bash scripts/with-node-lts.sh ng serve",
+    "build": "bash scripts/with-node-lts.sh ng build",
+    "watch": "bash scripts/with-node-lts.sh ng build --watch --configuration development",
+    "test": "bash scripts/with-node-lts.sh ng test",
+    "upload:mushaf": "bash scripts/with-node-lts.sh node scripts/upload-mushaf.mjs",
+    "upload:mushaf-surahs": "bash scripts/with-node-lts.sh node scripts/upload-mushaf-surahs.mjs"
   },
   "private": true,
   "dependencies": {
@@ -43,6 +43,6 @@
     "typescript": "~5.2.2"
   },
   "engines": {
-    "node": "20.x"
+    "node": ">=20 <23"
   }
 }
