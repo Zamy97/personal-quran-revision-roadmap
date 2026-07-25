@@ -621,13 +621,15 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
 
   /**
    * Keep two-page mode on odd right-hand starts (1–2, 3–4, …).
-   * The last page alone is allowed when the surah has an odd page count.
+   * Even pages always snap back into their pair — including the last page
+   * of an even-length surah (e.g. Fajr page 2 → show 1–2 again).
+   * A lone last page is only valid when the page count is odd (e.g. 5 of 5).
    */
   private normalizeMushafPage(page: number): number {
     const min = this.mushafPageMin;
     const max = this.mushafPageMax;
     let p = Math.max(min, Math.min(max, Math.floor(page) || min));
-    if (this.mushafTwoPage && max > 1 && p < max && p % 2 === 0) {
+    if (this.mushafTwoPage && max > 1 && p % 2 === 0) {
       p -= 1;
     }
     return Math.max(min, Math.min(max, p));
