@@ -181,7 +181,17 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
 
   @HostListener('window:keydown', ['$event'])
   onWindowKeydown(event: KeyboardEvent): void {
-    if (!this.mushafOpen) {
+    if (!this.mushafOpen || this.mushafLoading) {
+      return;
+    }
+    const target = event.target as HTMLElement | null;
+    if (
+      target &&
+      (target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.tagName === 'SELECT' ||
+        target.isContentEditable)
+    ) {
       return;
     }
     if (event.key === 'Escape') {
@@ -233,9 +243,12 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
     if (this.statusTimer) {
       clearTimeout(this.statusTimer);
     }
+    this.mushafRenderToken += 1;
+    void this.cancelMushafRenders();
     void this.pdfDoc?.destroy();
     this.pdfDoc = null;
     this.pdfLoadPromise = null;
+    this.loadedPdfUrl = null;
   }
 
   get currentSurah(): Surah | undefined {
@@ -375,7 +388,7 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
 
   get canGoNextMushafPage(): boolean {
     if (this.mushafTwoPage) {
-      // Next spread start, or the final single page after the last pair.
+      // Next spread, or the leftover last page when page count is odd.
       return this.mushafPage + 1 < this.mushafPageMax;
     }
     return this.mushafPage < this.mushafPageMax;
@@ -576,6 +589,13 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
     this.mushafError = '';
     this.mushafOpen = true;
     this.lastFollowSyncedPage = null;
+    // Reopening the playing surah should resume follow-along.
+    if (this.mushafFollowAudio && this.playingSurah === surahNumber) {
+      this.mushafFollowSuspended = false;
+      this.scheduleMushafRender();
+      this.onAudioTimeUpdate();
+      return;
+    }
     this.scheduleMushafRender();
   }
 
@@ -652,6 +672,7 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
       return this.pdfDoc;
     }
 
+    // Drop a stale document when switching surahs.
     if (this.pdfDoc) {
       try {
         await this.pdfDoc.destroy();
@@ -659,32 +680,45 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
         /* ignore */
       }
       this.pdfDoc = null;
+    }
+
+    // Abandon an in-flight load for a different surah (Play all / quick switch).
+    if (this.pdfLoadPromise && this.loadedPdfUrl !== url) {
       this.pdfLoadPromise = null;
+      this.loadedPdfUrl = null;
     }
 
     if (!this.pdfLoadPromise) {
-      this.mushafLoading = true;
       this.mushafError = '';
       this.loadedPdfUrl = url;
+      const loadUrl = url;
       this.pdfLoadPromise = getDocument({
         url,
         // Range requests avoid pulling the whole file before the first page.
         disableAutoFetch: true,
         disableStream: false
       })
-        .promise.then((doc) => {
+        .promise.then(async (doc) => {
+          // Another surah may have started loading while we waited.
+          if (this.loadedPdfUrl !== loadUrl) {
+            try {
+              await doc.destroy();
+            } catch {
+              /* ignore */
+            }
+            throw new Error('Stale mushaf PDF load');
+          }
           this.pdfDoc = doc;
           return doc;
         })
         .catch((err: unknown) => {
-          this.pdfLoadPromise = null;
-          this.loadedPdfUrl = null;
-          this.mushafError =
-            'Could not load the mushaf PDF. Check the Blob URL / local file.';
+          if (this.loadedPdfUrl === loadUrl) {
+            this.pdfLoadPromise = null;
+            this.loadedPdfUrl = null;
+            this.mushafError =
+              'Could not load the mushaf PDF. Check the Blob URL / local file.';
+          }
           throw err;
-        })
-        .finally(() => {
-          this.mushafLoading = false;
         });
     }
     return this.pdfLoadPromise;
@@ -713,6 +747,17 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
           this.scheduleMushafRender();
         } else {
           this.mushafError = 'Could not render this mushaf page.';
+        }
+        return;
+      }
+
+      // Layout not ready yet (overlay still measuring) — retry instead of
+      // painting a tiny/blank page.
+      if (wrap.clientWidth < 40 || wrap.clientHeight < 40) {
+        if (this.mushafDomRetry < 8) {
+          this.mushafDomRetry += 1;
+          waitingForDom = true;
+          this.scheduleMushafRender();
         }
         return;
       }
@@ -767,7 +812,12 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
       } else {
         await this.cancelRenderSide('left');
       }
-    } catch {
+    } catch (err: unknown) {
+      // Ignore superseded loads while switching surahs quickly.
+      const message = err instanceof Error ? err.message : '';
+      if (message === 'Stale mushaf PDF load') {
+        return;
+      }
       if (token === this.mushafRenderToken) {
         this.mushafError =
           this.mushafError || 'Could not render this mushaf page.';
@@ -815,55 +865,67 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
   ): Promise<void> {
     await this.cancelRenderSide(side);
 
+    if (pageNumber < 1 || pageNumber > doc.numPages) {
+      throw new Error(`Mushaf page ${pageNumber} is out of range`);
+    }
+
     const page = await doc.getPage(pageNumber);
-    const base = page.getViewport({ scale: 1 });
-    const scale = Math.min(maxWidth / base.width, maxHeight / base.height);
-    const viewport = page.getViewport({ scale });
-    const outputScale = window.devicePixelRatio || 1;
-
-    canvas.width = Math.floor(viewport.width * outputScale);
-    canvas.height = Math.floor(viewport.height * outputScale);
-    canvas.style.width = `${Math.floor(viewport.width)}px`;
-    canvas.style.height = `${Math.floor(viewport.height)}px`;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) {
-      return;
-    }
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    const transform =
-      outputScale !== 1
-        ? ([outputScale, 0, 0, outputScale, 0, 0] as const)
-        : undefined;
-    const task = page.render({
-      canvasContext: ctx,
-      viewport,
-      transform: transform ? [...transform] : undefined
-    });
-    if (side === 'left') {
-      this.leftRenderTask = task;
-    } else {
-      this.rightRenderTask = task;
-    }
     try {
-      await task.promise;
-    } catch (err: unknown) {
-      // PDF.js rejects cancelled renders — ignore those.
-      const name =
-        err && typeof err === 'object' && 'name' in err
-          ? String((err as { name: string }).name)
-          : '';
-      if (name !== 'RenderingCancelledException') {
-        throw err;
+      const base = page.getViewport({ scale: 1 });
+      const scale = Math.min(maxWidth / base.width, maxHeight / base.height);
+      const viewport = page.getViewport({ scale });
+      const outputScale = window.devicePixelRatio || 1;
+
+      canvas.width = Math.floor(viewport.width * outputScale);
+      canvas.height = Math.floor(viewport.height * outputScale);
+      canvas.style.width = `${Math.floor(viewport.width)}px`;
+      canvas.style.height = `${Math.floor(viewport.height)}px`;
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        return;
+      }
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const transform =
+        outputScale !== 1
+          ? ([outputScale, 0, 0, outputScale, 0, 0] as const)
+          : undefined;
+      const task = page.render({
+        canvasContext: ctx,
+        viewport,
+        transform: transform ? [...transform] : undefined
+      });
+      if (side === 'left') {
+        this.leftRenderTask = task;
+      } else {
+        this.rightRenderTask = task;
+      }
+      try {
+        await task.promise;
+      } catch (err: unknown) {
+        // PDF.js rejects cancelled renders — ignore those.
+        const name =
+          err && typeof err === 'object' && 'name' in err
+            ? String((err as { name: string }).name)
+            : '';
+        if (name !== 'RenderingCancelledException') {
+          throw err;
+        }
+      } finally {
+        if (side === 'left' && this.leftRenderTask === task) {
+          this.leftRenderTask = null;
+        }
+        if (side === 'right' && this.rightRenderTask === task) {
+          this.rightRenderTask = null;
+        }
       }
     } finally {
-      if (side === 'left' && this.leftRenderTask === task) {
-        this.leftRenderTask = null;
-      }
-      if (side === 'right' && this.rightRenderTask === task) {
-        this.rightRenderTask = null;
+      try {
+        page.cleanup();
+      } catch {
+        /* ignore */
       }
     }
   }
