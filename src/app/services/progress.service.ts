@@ -79,6 +79,14 @@ export class ProgressService {
     this.update({ daily: emptyDaily() });
   }
 
+  /** Reset the daily checklist when the calendar date rolls over without a reload. */
+  refreshForNewDay(): void {
+    if (this.snapshot.daily.date === todayKey()) {
+      return;
+    }
+    this.update({ daily: emptyDaily() });
+  }
+
   exportJson(): string {
     return JSON.stringify(this.snapshot, null, 2);
   }

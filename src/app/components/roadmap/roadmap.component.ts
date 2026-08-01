@@ -28,7 +28,10 @@ import {
   getReciter
 } from '../../data/reciters';
 import { SURAHS, Surah, formatSurahName, getSurah, surahLabel } from '../../data/surahs';
-import { MemorizationProgress } from '../../models/progress.model';
+import {
+  MemorizationProgress,
+  todayKey
+} from '../../models/progress.model';
 import { ProgressService } from '../../services/progress.service';
 import {
   PDFDocumentProxy,
@@ -110,6 +113,10 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private sub?: Subscription;
   private statusTimer?: ReturnType<typeof setTimeout>;
+  /** YYYY-MM-DD last applied as “today” (detects overnight / idle tabs). */
+  private calendarDateKey = '';
+  private dayWatchTimer?: ReturnType<typeof setInterval>;
+  private midnightTimer?: ReturnType<typeof setTimeout>;
 
   constructor(private readonly progressService: ProgressService) {
     this.progress = this.progressService.snapshot;
@@ -119,11 +126,8 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.refreshClockLabels();
-    this.todayManzil =
-      this.manzilLoop.find((d) => d.dayIndex === new Date().getDay()) ||
-      this.manzilLoop[6];
-    this.selectedManzil = this.todayManzil;
+    this.syncCalendarDay(true);
+    this.startDayWatcher();
     this.sub = this.progressService.progress$.subscribe((progress) => {
       this.progress = progress;
       this.syncDerivedState(progress);
@@ -176,6 +180,18 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
     this.updateScrollHint();
     if (this.mushafOpen) {
       void this.renderMushafPage();
+    }
+  }
+
+  @HostListener('window:focus')
+  onWindowFocus(): void {
+    this.syncCalendarDay();
+  }
+
+  @HostListener('document:visibilitychange')
+  onDocumentVisibilityChange(): void {
+    if (document.visibilityState === 'visible') {
+      this.syncCalendarDay();
     }
   }
 
@@ -243,6 +259,7 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
     if (this.statusTimer) {
       clearTimeout(this.statusTimer);
     }
+    this.stopDayWatcher();
     this.mushafRenderToken += 1;
     void this.cancelMushafRenders();
     void this.pdfDoc?.destroy();
@@ -1092,6 +1109,67 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
       day: 'numeric'
     });
     this.todayWeekday = now.toLocaleDateString(undefined, { weekday: 'long' });
+  }
+
+  /**
+   * Keep manzil “today” in sync when the tab stays open past midnight
+   * or is focused again the next day without a full reload.
+   */
+  private syncCalendarDay(isInitial = false): void {
+    const key = todayKey();
+    if (key === this.calendarDateKey) {
+      return;
+    }
+
+    const rolledOver = !!this.calendarDateKey && !isInitial;
+    this.calendarDateKey = key;
+    this.refreshClockLabels();
+    this.todayManzil =
+      this.manzilLoop.find((d) => d.dayIndex === new Date().getDay()) ||
+      this.manzilLoop[6];
+
+    if (rolledOver) {
+      this.stopPlaybackForDayChange();
+      this.progressService.refreshForNewDay();
+    }
+
+    this.selectedManzil = this.todayManzil;
+
+    if (rolledOver) {
+      this.flash(`New day — now on ${this.todayManzil.day}’s revision.`);
+      queueMicrotask(() => this.updateScrollHint());
+    }
+  }
+
+  private startDayWatcher(): void {
+    this.stopDayWatcher();
+    // Cheap backup if focus/visibility events are missed.
+    this.dayWatchTimer = setInterval(() => this.syncCalendarDay(), 60_000);
+    this.scheduleMidnightTick();
+  }
+
+  private scheduleMidnightTick(): void {
+    if (this.midnightTimer) {
+      clearTimeout(this.midnightTimer);
+    }
+    const now = new Date();
+    const nextMidnight = new Date(now);
+    nextMidnight.setHours(24, 0, 1, 0);
+    this.midnightTimer = setTimeout(() => {
+      this.syncCalendarDay();
+      this.scheduleMidnightTick();
+    }, Math.max(1_000, nextMidnight.getTime() - now.getTime()));
+  }
+
+  private stopDayWatcher(): void {
+    if (this.dayWatchTimer) {
+      clearInterval(this.dayWatchTimer);
+      this.dayWatchTimer = undefined;
+    }
+    if (this.midnightTimer) {
+      clearTimeout(this.midnightTimer);
+      this.midnightTimer = undefined;
+    }
   }
 
   private flash(message: string): void {
