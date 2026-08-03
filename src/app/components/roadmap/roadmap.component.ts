@@ -75,6 +75,9 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
   selectedReciterId = DEFAULT_RECITER_ID;
   /** Choices for how many times a surah plays in Play all. */
   readonly repeatChoices = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+  /** Playback speed options for the audio element / mushaf controls. */
+  readonly playbackRateChoices = [0.75, 1, 1.25, 1.5, 1.75, 2];
+  playbackRate = 1;
 
   /** Inline mushaf viewer state */
   mushafOpen = false;
@@ -212,6 +215,11 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
     }
     if (event.key === 'Escape') {
       this.closeMushaf();
+      return;
+    }
+    if (event.key === ' ' || event.key === 'Spacebar') {
+      event.preventDefault();
+      this.toggleMushafAudio();
       return;
     }
     if (event.key === 'ArrowLeft' || event.key === 'PageUp') {
@@ -423,6 +431,48 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
 
   get isMushafFollowPressed(): boolean {
     return this.mushafFollowAudio && !this.mushafFollowSuspended;
+  }
+
+  get mushafAudioButtonLabel(): string {
+    return this.isAudioPlaying ? '❚❚ Pause' : '▶ Play';
+  }
+
+  /** Play / pause from the mushaf popup without closing it. */
+  toggleMushafAudio(): void {
+    const audio = this.playerRef?.nativeElement;
+    const surah = this.mushafSurahNumber;
+    if (!audio || surah == null) {
+      return;
+    }
+
+    if (this.playingSurah === surah && !audio.paused) {
+      audio.pause();
+      return;
+    }
+
+    if (this.playingSurah === surah && audio.paused && audio.getAttribute('src')) {
+      audio.playbackRate = this.playbackRate;
+      audio.play().catch(() => {
+        this.flash('Could not resume audio — check your connection.');
+      });
+      return;
+    }
+
+    this.sequenceMode = false;
+    this.sequenceRep = 1;
+    this.startAudio(surah);
+  }
+
+  onPlaybackRateChange(raw: number | string): void {
+    const rate = Number(raw);
+    if (!Number.isFinite(rate) || rate <= 0) {
+      return;
+    }
+    this.playbackRate = rate;
+    const audio = this.playerRef?.nativeElement;
+    if (audio) {
+      audio.playbackRate = rate;
+    }
   }
 
   toggleMushafTwoPage(): void {
@@ -1062,6 +1112,7 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
     audio.src = this.audioUrl(surahNumber);
+    audio.playbackRate = this.playbackRate;
     this.playingSurah = surahNumber;
     this.lastFollowSyncedPage = null;
     if (this.mushafFollowAudio) {

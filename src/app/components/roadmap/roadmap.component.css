@@ -1029,11 +1029,40 @@ tbody td strong {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
+  align-items: center;
 }
 
 .mushaf-nav .btn.solid {
   background: var(--brand-mid);
   color: var(--on-brand);
+}
+
+.mushaf-audio-btn {
+  font-weight: 700;
+  min-width: 5.5rem;
+}
+
+.mushaf-speed select {
+  min-height: 2.15rem;
+  padding: 0.25rem 0.45rem;
+  border: 1px solid rgba(232, 240, 226, 0.35);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #f5f8ff;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mushaf-speed select:focus {
+  outline: 2px solid color-mix(in srgb, var(--accent) 70%, white);
+  outline-offset: 1px;
+}
+
+.mushaf-speed option {
+  color: #0f1b3d;
+  background: #fff;
 }
 
 .mushaf-close {

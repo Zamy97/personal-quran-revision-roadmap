@@ -279,6 +279,29 @@
         <div class="mushaf-nav">
           <button
             type="button"
+            class="btn ghost mushaf-audio-btn"
+            [disabled]="!mushafSurahNumber"
+            (click)="toggleMushafAudio()"
+            [attr.aria-label]="isAudioPlaying ? 'Pause audio' : 'Play audio'"
+            title="Space also toggles play/pause"
+          >
+            {{ mushafAudioButtonLabel }}
+          </button>
+          <label class="mushaf-speed">
+            <span class="sr-only">Playback speed</span>
+            <select
+              [ngModel]="playbackRate"
+              (ngModelChange)="onPlaybackRateChange($event)"
+              [attr.aria-label]="'Playback speed ' + playbackRate + '×'"
+              title="Playback speed"
+            >
+              <option *ngFor="let r of playbackRateChoices" [ngValue]="r">
+                {{ r }}×
+              </option>
+            </select>
+          </label>
+          <button
+            type="button"
             class="btn ghost"
             [disabled]="!canGoPrevMushafPage || mushafLoading"
             (click)="shiftMushafPage(-1)"
