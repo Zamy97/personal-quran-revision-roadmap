@@ -1,11 +1,11 @@
 <div class="page">
-  <header class="topbar">
+  <header class="topbar" [class.compact]="activeTab !== 'roadmap'">
     <div class="brand">
       <h1>Revision Roadmap</h1>
       <p>{{ todayLabel }}</p>
     </div>
 
-    <div class="phase-strip">
+    <div class="phase-strip" [hidden]="activeTab !== 'roadmap'">
       <span class="phase-label">Phase</span>
       <strong>{{ progress.currentPhase }}</strong>
       <span class="phase-meta" *ngIf="progress.currentAyah > 0">
@@ -27,8 +27,10 @@
       >
         {{ darkMode ? 'Light' : 'Dark' }}
       </button>
-      <button type="button" class="btn ghost" (click)="resetToday()">Reset</button>
-      <button type="button" class="btn solid" (click)="markAllDone()">All done</button>
+      <ng-container *ngIf="activeTab === 'roadmap'">
+        <button type="button" class="btn ghost" (click)="resetToday()">Reset</button>
+        <button type="button" class="btn solid" (click)="markAllDone()">All done</button>
+      </ng-container>
       <button type="button" class="btn ghost" (click)="downloadBackup()">Backup</button>
       <label class="btn solid file-btn">
         Restore

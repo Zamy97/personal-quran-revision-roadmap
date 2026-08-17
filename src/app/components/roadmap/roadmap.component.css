@@ -45,6 +45,18 @@
   animation: page-enter 0.55s ease-out both;
 }
 
+/* Without the phase strip, brand and actions share the bar. */
+.topbar.compact {
+  grid-template-columns: 1fr auto;
+}
+
+/* These panels set a display value, which would otherwise beat [hidden]. */
+.workspace[hidden],
+.phase-strip[hidden],
+.memorized-workspace[hidden] {
+  display: none;
+}
+
 .brand {
   display: flex;
   align-items: baseline;
