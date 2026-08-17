@@ -23,9 +23,8 @@ import {
   pageCountForSurah
 } from '../../data/mushaf-pages';
 import {
-  FULL_MEMORIZED_SURAHS,
+  MEMORIZED_BY_JUZ,
   MEMORIZED_PORTIONS,
-  MEMORIZED_SELECTIONS,
   MemorizedPortion
 } from '../../data/memorized-portions';
 import {
@@ -61,8 +60,7 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly totalTasks = DAILY_BLUEPRINT.length;
   readonly reciters = RECITERS;
   readonly memorizedPortions = MEMORIZED_PORTIONS;
-  readonly fullMemorizedSurahs = FULL_MEMORIZED_SURAHS;
-  readonly memorizedSelections = MEMORIZED_SELECTIONS;
+  readonly memorizedByJuz = MEMORIZED_BY_JUZ;
 
   progress: MemorizationProgress;
   activeTab: 'roadmap' | 'memorized' = 'roadmap';
@@ -707,25 +705,6 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
     return this.playingSurah
       ? formatSurahName(this.playingSurah)
       : 'Nothing playing';
-  }
-
-  isMemorizedReviewedToday(portion: MemorizedPortion): boolean {
-    return this.progress.memorizedReviews[portion.id] === todayKey();
-  }
-
-  toggleMemorizedReview(portion: MemorizedPortion): void {
-    this.progressService.toggleMemorizedReview(portion.id);
-    this.flash(
-      this.isMemorizedReviewedToday(portion)
-        ? `${portion.detail} reviewed today.`
-        : `${portion.detail} marked for review again.`
-    );
-  }
-
-  memorizedReviewedCount(): number {
-    return this.memorizedPortions.filter((portion) =>
-      this.isMemorizedReviewedToday(portion)
-    ).length;
   }
 
   closeMushaf(): void {

@@ -316,7 +316,7 @@
   margin: 0 0 0.65rem;
 }
 
-.memorized-section-head.selections-head {
+.memorized-juz + .memorized-juz {
   margin-top: 1.5rem;
 }
 
@@ -366,11 +366,6 @@
   box-shadow: var(--shadow-lift);
 }
 
-.memorized-card.reviewed {
-  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
-  background: linear-gradient(180deg, var(--surface), var(--accent-soft));
-}
-
 .memorized-card-top {
   display: flex;
   align-items: center;
@@ -417,7 +412,6 @@
   margin-top: auto;
 }
 
-.review-button,
 .portion-mushaf,
 .listen-button {
   color: var(--brand-deep);
@@ -435,14 +429,7 @@
   background: var(--accent-soft);
 }
 
-.review-button.reviewed {
-  color: var(--accent-deep);
-  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
-  background: var(--accent-soft);
-}
-
 .portion-mushaf:hover,
-.review-button:hover,
 .listen-button:hover {
   border-color: var(--brand);
   background: var(--brand-soft);

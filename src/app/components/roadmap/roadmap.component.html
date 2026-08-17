@@ -292,11 +292,11 @@
       <div>
         <span class="eyebrow">My Quran collection</span>
         <h2 id="memorized-heading">Memorized Portions</h2>
-        <p>Full surahs, pages, and ayah ranges you have memorized.</p>
+        <p>Full surahs, pages, and ayah ranges — grouped by juz.</p>
       </div>
       <div class="memorized-summary">
-        <strong>{{ memorizedReviewedCount() }}/{{ memorizedPortions.length }}</strong>
-        <span>reviewed today</span>
+        <strong>{{ memorizedPortions.length }}</strong>
+        <span>portions · {{ memorizedByJuz.length }} juz</span>
       </div>
     </div>
 
@@ -316,104 +316,54 @@
       </label>
     </div>
 
-    <div class="memorized-section-head">
-      <div>
-        <h3>Full Surahs</h3>
-        <p>All surahs from your weekly memorization plan.</p>
+    <section class="memorized-juz" *ngFor="let group of memorizedByJuz">
+      <div class="memorized-section-head">
+        <div>
+          <h3>{{ group.label }}</h3>
+          <p>
+            {{ group.portions.length }}
+            portion{{ group.portions.length === 1 ? '' : 's' }}
+          </p>
+        </div>
+        <span>{{ group.portions.length }}</span>
       </div>
-      <span>{{ fullMemorizedSurahs.length }} surahs</span>
-    </div>
 
-    <div class="memorized-grid">
-      <article
-        class="memorized-card"
-        *ngFor="let portion of fullMemorizedSurahs"
-        [class.reviewed]="isMemorizedReviewedToday(portion)"
-      >
-        <div class="memorized-card-top">
-          <span class="portion-type">{{ portion.section }}</span>
-          <span class="memorized-badge">✓ Memorized</span>
-        </div>
-        <h3>{{ portion.title }}</h3>
-        <p>{{ portion.detail }}</p>
-        <div class="memorized-actions">
-          <button
-            type="button"
-            class="btn listen-button"
-            [class.playing]="playingSurah === portion.surahNumber && isAudioPlaying"
-            (click)="playMemorizedPortion(portion)"
-          >
-            {{ memorizedAudioLabel(portion) }}
-          </button>
-          <button
-            type="button"
-            class="btn review-button"
-            [class.reviewed]="isMemorizedReviewedToday(portion)"
-            [attr.aria-pressed]="isMemorizedReviewedToday(portion)"
-            (click)="toggleMemorizedReview(portion)"
-          >
-            {{ isMemorizedReviewedToday(portion) ? '✓ Reviewed today' : 'Mark reviewed today' }}
-          </button>
-          <button
-            type="button"
-            class="btn portion-mushaf"
-            (click)="openMemorizedPortion(portion)"
-          >
-            📖 Open Mushaf
-          </button>
-        </div>
-      </article>
-    </div>
-
-    <div class="memorized-section-head selections-head">
-      <div>
-        <h3>Selected Ayahs &amp; Pages</h3>
-        <p>Memorized portions that are not a complete surah.</p>
+      <div class="memorized-grid">
+        <article
+          class="memorized-card"
+          *ngFor="let portion of group.portions"
+        >
+          <div class="memorized-card-top">
+            <span class="portion-type">{{ portion.section }}</span>
+            <span class="memorized-badge">✓ Memorized</span>
+          </div>
+          <h3>{{ portion.title }}</h3>
+          <p>{{ portion.detail }}</p>
+          <div class="memorized-actions">
+            <button
+              type="button"
+              class="btn listen-button"
+              [class.playing]="playingSurah === portion.surahNumber && isAudioPlaying"
+              (click)="playMemorizedPortion(portion)"
+              [attr.title]="
+                portion.section === 'Full Surah'
+                  ? 'Play this surah'
+                  : 'Play the complete surah audio'
+              "
+            >
+              {{ memorizedAudioLabel(portion) }}
+            </button>
+            <button
+              type="button"
+              class="btn portion-mushaf"
+              (click)="openMemorizedPortion(portion)"
+            >
+              📖 Open Mushaf
+            </button>
+          </div>
+        </article>
       </div>
-      <span>{{ memorizedSelections.length }} portions</span>
-    </div>
-
-    <div class="memorized-grid">
-      <article
-        class="memorized-card"
-        *ngFor="let portion of memorizedSelections"
-        [class.reviewed]="isMemorizedReviewedToday(portion)"
-      >
-        <div class="memorized-card-top">
-          <span class="portion-type">{{ portion.section }}</span>
-          <span class="memorized-badge">✓ Memorized</span>
-        </div>
-        <h3>{{ portion.title }}</h3>
-        <p>{{ portion.detail }}</p>
-        <div class="memorized-actions">
-          <button
-            type="button"
-            class="btn listen-button"
-            [class.playing]="playingSurah === portion.surahNumber && isAudioPlaying"
-            (click)="playMemorizedPortion(portion)"
-            title="Play the complete surah audio"
-          >
-            {{ memorizedAudioLabel(portion) }}
-          </button>
-          <button
-            type="button"
-            class="btn review-button"
-            [class.reviewed]="isMemorizedReviewedToday(portion)"
-            [attr.aria-pressed]="isMemorizedReviewedToday(portion)"
-            (click)="toggleMemorizedReview(portion)"
-          >
-            {{ isMemorizedReviewedToday(portion) ? '✓ Reviewed today' : 'Mark reviewed today' }}
-          </button>
-          <button
-            type="button"
-            class="btn portion-mushaf"
-            (click)="openMemorizedPortion(portion)"
-          >
-            📖 Open Mushaf
-          </button>
-        </div>
-      </article>
-    </div>
+    </section>
 
     <p class="memorized-note">
       Listen plays the selected reciter’s complete surah audio. More individual
