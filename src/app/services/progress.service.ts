@@ -79,6 +79,16 @@ export class ProgressService {
     this.update({ daily: emptyDaily() });
   }
 
+  toggleMemorizedReview(portionId: string): void {
+    const reviews = { ...this.snapshot.memorizedReviews };
+    if (reviews[portionId] === todayKey()) {
+      delete reviews[portionId];
+    } else {
+      reviews[portionId] = todayKey();
+    }
+    this.update({ memorizedReviews: reviews });
+  }
+
   /** Reset the daily checklist when the calendar date rolls over without a reload. */
   refreshForNewDay(): void {
     if (this.snapshot.daily.date === todayKey()) {
@@ -194,6 +204,12 @@ export class ProgressService {
       currentPhase: formatSurahName(surah.number),
       currentLine: ayah,
       daily,
+      memorizedReviews:
+        value.memorizedReviews &&
+        typeof value.memorizedReviews === 'object' &&
+        !Array.isArray(value.memorizedReviews)
+          ? { ...value.memorizedReviews }
+          : {},
       updatedAt: value.updatedAt || new Date().toISOString()
     };
   }
@@ -205,6 +221,7 @@ export class ProgressService {
       currentPhase: formatSurahName(DEFAULT_SURAH_NUMBER),
       currentLine: 0,
       daily: emptyDaily(),
+      memorizedReviews: {},
       updatedAt: new Date().toISOString()
     };
   }

@@ -37,7 +37,27 @@
     </div>
   </header>
 
-  <div class="workspace">
+  <nav class="page-tabs" aria-label="Roadmap sections">
+    <button
+      type="button"
+      [class.active]="activeTab === 'roadmap'"
+      [attr.aria-selected]="activeTab === 'roadmap'"
+      (click)="activeTab = 'roadmap'"
+    >
+      Revision Roadmap
+    </button>
+    <button
+      type="button"
+      [class.active]="activeTab === 'memorized'"
+      [attr.aria-selected]="activeTab === 'memorized'"
+      (click)="activeTab = 'memorized'"
+    >
+      Memorized
+      <span>{{ memorizedPortions.length }}</span>
+    </button>
+  </nav>
+
+  <div class="workspace" [hidden]="activeTab !== 'roadmap'">
     <section class="col left" aria-label="Daily plan and tracking">
       <div class="blueprint-grid">
         <button
@@ -262,6 +282,147 @@
       </details>
     </section>
   </div>
+
+  <section
+    class="memorized-workspace"
+    [hidden]="activeTab !== 'memorized'"
+    aria-labelledby="memorized-heading"
+  >
+    <div class="memorized-hero">
+      <div>
+        <span class="eyebrow">My Quran collection</span>
+        <h2 id="memorized-heading">Memorized Portions</h2>
+        <p>Full surahs, pages, and ayah ranges you have memorized.</p>
+      </div>
+      <div class="memorized-summary">
+        <strong>{{ memorizedReviewedCount() }}/{{ memorizedPortions.length }}</strong>
+        <span>reviewed today</span>
+      </div>
+    </div>
+
+    <div class="memorized-listen-bar">
+      <div>
+        <span>Now playing</span>
+        <strong>{{ memorizedNowPlaying }}</strong>
+      </div>
+      <label class="memorized-reciter">
+        <span>Reciter</span>
+        <select
+          [ngModel]="selectedReciterId"
+          (ngModelChange)="onReciterChange($event)"
+        >
+          <option *ngFor="let r of reciters" [ngValue]="r.id">{{ r.label }}</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="memorized-section-head">
+      <div>
+        <h3>Full Surahs</h3>
+        <p>All surahs from your weekly memorization plan.</p>
+      </div>
+      <span>{{ fullMemorizedSurahs.length }} surahs</span>
+    </div>
+
+    <div class="memorized-grid">
+      <article
+        class="memorized-card"
+        *ngFor="let portion of fullMemorizedSurahs"
+        [class.reviewed]="isMemorizedReviewedToday(portion)"
+      >
+        <div class="memorized-card-top">
+          <span class="portion-type">{{ portion.section }}</span>
+          <span class="memorized-badge">✓ Memorized</span>
+        </div>
+        <h3>{{ portion.title }}</h3>
+        <p>{{ portion.detail }}</p>
+        <div class="memorized-actions">
+          <button
+            type="button"
+            class="btn listen-button"
+            [class.playing]="playingSurah === portion.surahNumber && isAudioPlaying"
+            (click)="playMemorizedPortion(portion)"
+          >
+            {{ memorizedAudioLabel(portion) }}
+          </button>
+          <button
+            type="button"
+            class="btn review-button"
+            [class.reviewed]="isMemorizedReviewedToday(portion)"
+            [attr.aria-pressed]="isMemorizedReviewedToday(portion)"
+            (click)="toggleMemorizedReview(portion)"
+          >
+            {{ isMemorizedReviewedToday(portion) ? '✓ Reviewed today' : 'Mark reviewed today' }}
+          </button>
+          <button
+            type="button"
+            class="btn portion-mushaf"
+            (click)="openMemorizedPortion(portion)"
+          >
+            📖 Open Mushaf
+          </button>
+        </div>
+      </article>
+    </div>
+
+    <div class="memorized-section-head selections-head">
+      <div>
+        <h3>Selected Ayahs &amp; Pages</h3>
+        <p>Memorized portions that are not a complete surah.</p>
+      </div>
+      <span>{{ memorizedSelections.length }} portions</span>
+    </div>
+
+    <div class="memorized-grid">
+      <article
+        class="memorized-card"
+        *ngFor="let portion of memorizedSelections"
+        [class.reviewed]="isMemorizedReviewedToday(portion)"
+      >
+        <div class="memorized-card-top">
+          <span class="portion-type">{{ portion.section }}</span>
+          <span class="memorized-badge">✓ Memorized</span>
+        </div>
+        <h3>{{ portion.title }}</h3>
+        <p>{{ portion.detail }}</p>
+        <div class="memorized-actions">
+          <button
+            type="button"
+            class="btn listen-button"
+            [class.playing]="playingSurah === portion.surahNumber && isAudioPlaying"
+            (click)="playMemorizedPortion(portion)"
+            title="Play the complete surah audio"
+          >
+            {{ memorizedAudioLabel(portion) }}
+          </button>
+          <button
+            type="button"
+            class="btn review-button"
+            [class.reviewed]="isMemorizedReviewedToday(portion)"
+            [attr.aria-pressed]="isMemorizedReviewedToday(portion)"
+            (click)="toggleMemorizedReview(portion)"
+          >
+            {{ isMemorizedReviewedToday(portion) ? '✓ Reviewed today' : 'Mark reviewed today' }}
+          </button>
+          <button
+            type="button"
+            class="btn portion-mushaf"
+            (click)="openMemorizedPortion(portion)"
+          >
+            📖 Open Mushaf
+          </button>
+        </div>
+      </article>
+    </div>
+
+    <p class="memorized-note">
+      Listen plays the selected reciter’s complete surah audio. More individual
+      pages and ayah ranges can be added here as your collection grows.
+    </p>
+    <p class="status memorized-status" *ngIf="statusMessage" role="status">
+      {{ statusMessage }}
+    </p>
+  </section>
 
   <!-- Inline mushaf overlay (floats over the single-page layout) -->
   <div class="mushaf-overlay" *ngIf="mushafOpen" (click)="closeMushaf()">

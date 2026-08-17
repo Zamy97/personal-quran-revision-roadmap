@@ -13,6 +13,8 @@ export interface MemorizationProgress {
   currentPhase: string;
   currentLine: number;
   daily: DailyCompletion;
+  /** Portion id → YYYY-MM-DD of its most recent review. */
+  memorizedReviews: Record<string, string>;
   updatedAt: string;
 }
 

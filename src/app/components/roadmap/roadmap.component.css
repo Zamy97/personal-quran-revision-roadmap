@@ -135,6 +135,54 @@
   font-weight: 700;
 }
 
+/* ---------- Main tabs ---------- */
+.page-tabs {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex: 0 0 auto;
+  padding: 0.25rem;
+  align-self: flex-start;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  box-shadow: var(--shadow-2);
+}
+
+.page-tabs button {
+  min-height: 2.1rem;
+  padding: 0.3rem 0.8rem;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.page-tabs button:hover {
+  color: var(--brand-deep);
+  background: var(--brand-soft);
+}
+
+.page-tabs button.active {
+  color: var(--on-brand);
+  background: linear-gradient(135deg, var(--brand-mid), var(--brand));
+}
+
+.page-tabs button span {
+  display: inline-grid;
+  min-width: 1.35rem;
+  height: 1.35rem;
+  margin-left: 0.3rem;
+  place-items: center;
+  border-radius: 999px;
+  background: color-mix(in srgb, currentColor 14%, transparent);
+  font-size: 0.75rem;
+}
+
 /* ---------- Workspace fills the rest of the screen ---------- */
 .workspace {
   flex: 1 1 auto;
@@ -143,6 +191,270 @@
   grid-template-columns: minmax(310px, 1fr) minmax(380px, 1.18fr);
   gap: 0.9rem;
   align-items: stretch;
+}
+
+/* ---------- Memorized collection ---------- */
+.memorized-workspace {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: clamp(1rem, 2.5vw, 2rem);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  box-shadow: var(--shadow-panel);
+  animation: page-enter 0.35s ease-out both;
+}
+
+.memorized-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.eyebrow {
+  color: var(--accent-deep);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.memorized-hero h2 {
+  margin: 0.2rem 0 0.3rem;
+  color: var(--brand-deep);
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 3vw, 2.4rem);
+  line-height: 1.15;
+}
+
+.memorized-hero p,
+.memorized-note {
+  margin: 0;
+  color: var(--muted);
+}
+
+.memorized-summary {
+  min-width: 8.5rem;
+  padding: 0.8rem 1rem;
+  border-radius: 12px;
+  color: var(--on-brand);
+  background: linear-gradient(135deg, #1833a8, #0f1b3d);
+  text-align: center;
+  box-shadow: var(--shadow-2);
+}
+
+.memorized-summary strong,
+.memorized-summary span {
+  display: block;
+}
+
+.memorized-summary strong {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+}
+
+.memorized-summary span {
+  color: var(--on-brand-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.memorized-listen-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.35rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--surface-2);
+}
+
+.memorized-listen-bar > div {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.memorized-listen-bar span,
+.memorized-reciter > span {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.memorized-listen-bar strong {
+  color: var(--brand-deep);
+  font-family: var(--font-display);
+}
+
+.memorized-reciter {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.memorized-reciter select {
+  min-height: 2.2rem;
+  padding: 0.3rem 0.55rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  color: var(--brand-deep);
+  background: var(--surface);
+}
+
+.memorized-section-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0 0 0.65rem;
+}
+
+.memorized-section-head.selections-head {
+  margin-top: 1.5rem;
+}
+
+.memorized-section-head h3 {
+  margin: 0;
+  color: var(--brand-deep);
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+}
+
+.memorized-section-head p {
+  margin: 0.15rem 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.memorized-section-head > span {
+  flex: 0 0 auto;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  color: var(--brand);
+  background: var(--brand-soft);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.memorized-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.memorized-card {
+  display: flex;
+  min-height: 12rem;
+  flex-direction: column;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: linear-gradient(180deg, var(--surface), var(--brand-wash));
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.memorized-card:hover {
+  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--brand) 35%, transparent);
+  box-shadow: var(--shadow-lift);
+}
+
+.memorized-card.reviewed {
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  background: linear-gradient(180deg, var(--surface), var(--accent-soft));
+}
+
+.memorized-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.portion-type,
+.memorized-badge {
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.portion-type {
+  color: var(--brand);
+  background: var(--brand-soft);
+}
+
+.memorized-badge {
+  color: var(--accent-deep);
+  background: var(--accent-soft);
+}
+
+.memorized-card h3 {
+  margin: 1.15rem 0 0.3rem;
+  color: var(--brand-deep);
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+}
+
+.memorized-card p {
+  margin: 0 0 1.25rem;
+  color: var(--ink-soft);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.memorized-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: auto;
+}
+
+.review-button,
+.portion-mushaf,
+.listen-button {
+  color: var(--brand-deep);
+  border-color: var(--line-strong);
+  background: var(--surface);
+}
+
+.listen-button {
+  color: var(--brand);
+}
+
+.listen-button.playing {
+  color: var(--accent-deep);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.review-button.reviewed {
+  color: var(--accent-deep);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  background: var(--accent-soft);
+}
+
+.portion-mushaf:hover,
+.review-button:hover,
+.listen-button:hover {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+}
+
+.memorized-note {
+  margin-top: 1rem;
+  font-size: 0.88rem;
+}
+
+.memorized-status {
+  margin-top: 0.6rem;
 }
 
 .col {
@@ -1178,6 +1490,14 @@ tbody td strong {
     grid-template-columns: 1fr;
   }
 
+  .memorized-workspace {
+    overflow: visible;
+  }
+
+  .memorized-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .col,
   .col.left,
   .listen-panel {
@@ -1204,6 +1524,25 @@ tbody td strong {
 
   .today-pill {
     max-width: none;
+  }
+
+  .memorized-hero {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .memorized-summary {
+    align-self: flex-start;
+  }
+
+  .memorized-listen-bar,
+  .memorized-reciter {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .memorized-grid {
+    grid-template-columns: 1fr;
   }
 
   .listen-head {

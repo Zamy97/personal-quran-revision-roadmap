@@ -23,6 +23,12 @@ import {
   pageCountForSurah
 } from '../../data/mushaf-pages';
 import {
+  FULL_MEMORIZED_SURAHS,
+  MEMORIZED_PORTIONS,
+  MEMORIZED_SELECTIONS,
+  MemorizedPortion
+} from '../../data/memorized-portions';
+import {
   DEFAULT_RECITER_ID,
   RECITERS,
   getReciter
@@ -54,8 +60,12 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly surahLabel = surahLabel;
   readonly totalTasks = DAILY_BLUEPRINT.length;
   readonly reciters = RECITERS;
+  readonly memorizedPortions = MEMORIZED_PORTIONS;
+  readonly fullMemorizedSurahs = FULL_MEMORIZED_SURAHS;
+  readonly memorizedSelections = MEMORIZED_SELECTIONS;
 
   progress: MemorizationProgress;
+  activeTab: 'roadmap' | 'memorized' = 'roadmap';
   todayLabel = '';
   todayWeekday = '';
   /** Calendar weekday’s manzil (always “today”). */
@@ -650,9 +660,9 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
     );
   }
 
-  openMushaf(surahNumber: number): void {
+  openMushaf(surahNumber: number, page = 1): void {
     this.mushafSurahNumber = surahNumber;
-    this.mushafPage = this.normalizeMushafPage(1);
+    this.mushafPage = this.normalizeMushafPage(page);
     this.mushafError = '';
     this.mushafOpen = true;
     this.lastFollowSyncedPage = null;
@@ -664,6 +674,58 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
     this.scheduleMushafRender();
+  }
+
+  openMemorizedPortion(portion: MemorizedPortion): void {
+    const pageCount = pageCountForSurah(portion.surahNumber);
+    const page =
+      portion.page === 'last'
+        ? pageCount
+        : portion.page === 'last-two'
+          ? Math.max(1, pageCount - 1)
+          : portion.page;
+    // Start on the exact requested page; the user can move to the next page
+    // for a multi-page portion without the spread snapping backward.
+    this.mushafTwoPage = false;
+    this.openMushaf(portion.surahNumber, page);
+  }
+
+  playMemorizedPortion(portion: MemorizedPortion): void {
+    const wasPlaying =
+      this.playingSurah === portion.surahNumber && this.isAudioPlaying;
+    this.playSurah(portion.surahNumber);
+    this.flash(wasPlaying ? 'Audio paused.' : `Listening to ${portion.title}.`);
+  }
+
+  memorizedAudioLabel(portion: MemorizedPortion): string {
+    return this.playingSurah === portion.surahNumber && this.isAudioPlaying
+      ? '❚❚ Pause'
+      : '▶ Listen';
+  }
+
+  get memorizedNowPlaying(): string {
+    return this.playingSurah
+      ? formatSurahName(this.playingSurah)
+      : 'Nothing playing';
+  }
+
+  isMemorizedReviewedToday(portion: MemorizedPortion): boolean {
+    return this.progress.memorizedReviews[portion.id] === todayKey();
+  }
+
+  toggleMemorizedReview(portion: MemorizedPortion): void {
+    this.progressService.toggleMemorizedReview(portion.id);
+    this.flash(
+      this.isMemorizedReviewedToday(portion)
+        ? `${portion.detail} reviewed today.`
+        : `${portion.detail} marked for review again.`
+    );
+  }
+
+  memorizedReviewedCount(): number {
+    return this.memorizedPortions.filter((portion) =>
+      this.isMemorizedReviewedToday(portion)
+    ).length;
   }
 
   closeMushaf(): void {
