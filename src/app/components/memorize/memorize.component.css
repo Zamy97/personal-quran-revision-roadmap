@@ -216,6 +216,53 @@
   cursor: not-allowed;
 }
 
+.mic-btn.listening {
+  color: var(--on-brand);
+  background: linear-gradient(180deg, #b45309, #9a3412);
+  border-color: transparent;
+}
+
+.recite-panel {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  background: var(--accent-soft);
+}
+
+.recite-panel strong {
+  color: var(--brand-deep);
+  font-size: 0.92rem;
+}
+
+.recite-panel span {
+  color: var(--accent-deep);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.recite-status {
+  margin: 0;
+  color: var(--brand);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.heard {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 1.05rem;
+  line-height: 1.6;
+  font-family: "Amiri", "Scheherazade New", "Noto Naskh Arabic", serif;
+}
+
+.skip-btn {
+  justify-self: start;
+  min-height: 2rem;
+  font-size: 0.82rem;
+}
+
 .status {
   margin: 0;
   color: var(--brand);
@@ -285,6 +332,12 @@
   background: var(--accent-soft);
   border-color: var(--accent);
   box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.ayah-list li.recite-target {
+  background: color-mix(in srgb, #b45309 14%, var(--surface));
+  border-color: #b45309;
+  box-shadow: inset 3px 0 0 #b45309;
 }
 
 .ayah-num {

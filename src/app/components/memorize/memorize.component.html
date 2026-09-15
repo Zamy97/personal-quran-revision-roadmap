@@ -7,7 +7,7 @@
         Intelligent successive sets — audio from
         <a href="https://everyayah.com/" target="_blank" rel="noopener noreferrer"
           >EveryAyah</a
-        >.
+        >. Mushaf + mic recite-along built in.
       </p>
     </div>
     <div class="memorize-live" *ngIf="isPlaying || awaitingContinue || currentSetLabel">
@@ -186,6 +186,59 @@
         </button>
       </div>
 
+      <div class="action-row">
+        <button
+          type="button"
+          class="btn ghost"
+          (click)="openMushafForCurrent()"
+        >
+          Mushaf
+        </button>
+        <button
+          type="button"
+          class="btn ghost mic-btn"
+          [class.listening]="isListening"
+          [disabled]="!speechSupported"
+          (click)="toggleListening()"
+          [attr.title]="
+            speechSupported
+              ? 'Recite into the mic — advances when the ayah matches'
+              : 'Needs Chrome or Edge for mic recognition'
+          "
+        >
+          {{ micButtonLabel }}
+        </button>
+      </div>
+
+      <label class="toggle">
+        <input type="checkbox" [(ngModel)]="followMushaf" />
+        <span>Follow mushaf while audio plays</span>
+      </label>
+
+      <label class="toggle" *ngIf="speechSupported">
+        <input type="checkbox" [(ngModel)]="hideTextWhileReciting" />
+        <span>Hide text while reciting</span>
+      </label>
+
+      <p class="hint" *ngIf="!speechSupported">
+        Mic recite-along needs Chrome or Edge (Web Speech API).
+      </p>
+
+      <div class="recite-panel" *ngIf="isListening || reciteAyah || reciteStatus">
+        <strong *ngIf="reciteAyah">Target: ayah {{ reciteAyah }}</strong>
+        <span *ngIf="matchScore">Match {{ (matchScore * 100) | number: '1.0-0' }}%</span>
+        <p *ngIf="reciteStatus" class="recite-status">{{ reciteStatus }}</p>
+        <p class="heard" *ngIf="lastHeard" dir="rtl" lang="ar">{{ lastHeard }}</p>
+        <button
+          type="button"
+          class="btn ghost skip-btn"
+          *ngIf="isListening && reciteAyah"
+          (click)="skipReciteAyah()"
+        >
+          Skip ayah
+        </button>
+      </div>
+
       <p class="status" *ngIf="statusMessage" role="status">{{ statusMessage }}</p>
 
       <audio
@@ -200,12 +253,16 @@
     <div class="ayah-panel" aria-label="Ayah text">
       <p class="text-status" *ngIf="textLoading">Loading Arabic text…</p>
       <p class="text-status error" *ngIf="!textLoading && textError">{{ textError }}</p>
+      <p class="text-status" *ngIf="!showAyahText && !textLoading">
+        Text hidden — recite ayah {{ reciteAyah }} from memory.
+      </p>
 
-      <ol class="ayah-list" *ngIf="ayahTexts.length">
+      <ol class="ayah-list" *ngIf="ayahTexts.length && showAyahText">
         <li
           *ngFor="let ayah of ayahTexts; trackBy: trackAyah"
           [class.in-window]="highlightedAyahs.has(ayah.number)"
           [class.active]="currentAyah === ayah.number"
+          [class.recite-target]="reciteAyah === ayah.number"
           [class.out-of-range]="ayah.number < fromAyah || ayah.number > toAyah"
         >
           <span class="ayah-num">{{ ayah.number }}</span>

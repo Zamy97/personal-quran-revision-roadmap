@@ -63,6 +63,24 @@ export function pageCountForSurah(surahNumber: number): number {
   );
 }
 
+/**
+ * Approximate page within a surah PDF for an ayah (1-based).
+ * Linear map across the surah’s page count — good enough to open the right spread.
+ */
+export function pageWithinSurahForAyah(
+  surahNumber: number,
+  ayahNumber: number,
+  ayahCount: number
+): number {
+  const pages = pageCountForSurah(surahNumber);
+  const total = Math.max(1, Math.floor(ayahCount) || 1);
+  const ayah = Math.max(1, Math.min(total, Math.floor(ayahNumber) || 1));
+  if (pages <= 1) {
+    return 1;
+  }
+  return Math.max(1, Math.min(pages, Math.ceil((ayah / total) * pages)));
+}
+
 export function surahPdfFileName(surahNumber: number): string {
   const n = Math.max(1, Math.min(114, Math.floor(surahNumber)));
   return `${String(n).padStart(3, '0')}.pdf`;

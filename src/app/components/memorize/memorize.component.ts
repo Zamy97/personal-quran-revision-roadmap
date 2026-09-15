@@ -1,10 +1,18 @@
 import {
   Component,
   ElementRef,
+  EventEmitter,
+  NgZone,
   OnDestroy,
+  Output,
   ViewChild
 } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import {
+  arabicSimilarity,
+  getSpeechRecognitionConstructor
+} from '../../data/arabic-speech';
+import { pageWithinSurahForAyah } from '../../data/mushaf-pages';
 import { SURAHS, Surah, getSurah, surahLabel } from '../../data/surahs';
 import {
   DEFAULT_EVERYAYAH_RECITER_ID,
@@ -25,12 +33,36 @@ interface SessionBlock {
   label: string;
 }
 
+export interface MemorizeMushafRequest {
+  surahNumber: number;
+  page: number;
+}
+
+/** Browser SpeechRecognition instance (Chrome / Edge). */
+interface SpeechRecognitionHandle {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  maxAlternatives: number;
+  onresult: ((event: {
+    resultIndex: number;
+    results: ArrayLike<{ isFinal: boolean; 0: { transcript: string } }>;
+  }) => void) | null;
+  onerror: ((event: Event & { error?: string }) => void) | null;
+  onend: (() => void) | null;
+  start(): void;
+  stop(): void;
+  abort(): void;
+}
+
 @Component({
   selector: 'app-memorize',
   templateUrl: './memorize.component.html',
   styleUrl: './memorize.component.css'
 })
 export class MemorizeComponent implements OnDestroy {
+  @Output() openMushaf = new EventEmitter<MemorizeMushafRequest>();
+
   readonly surahs = SURAHS;
   readonly surahLabel = surahLabel;
   readonly reciters = EVERYAYAH_RECITERS;
@@ -39,6 +71,8 @@ export class MemorizeComponent implements OnDestroy {
   readonly delayChoices = [0, 250, 500, 750, 1000, 1500, 2000, 3000];
   readonly pauseChoices = [2000, 3000, 4000, 5000, 6000, 8000, 10000, 15000];
   readonly playbackRateChoices = [0.75, 1, 1.25, 1.5, 1.75, 2];
+  /** Minimum similarity (0–1) to count an ayah as recited. */
+  readonly matchThreshold = 0.55;
 
   surahNumber = 67;
   fromAyah = 1;
@@ -78,6 +112,18 @@ export class MemorizeComponent implements OnDestroy {
   setRepeatTotal = 0;
   blockKind: 'new' | 'set' | '' = '';
 
+  /** Keep parent mushaf viewer on the ayah currently playing. */
+  followMushaf = true;
+  /** Hide Arabic text while reciting (Tarteel-style practice). */
+  hideTextWhileReciting = false;
+
+  speechSupported = !!getSpeechRecognitionConstructor();
+  isListening = false;
+  reciteAyah = 0;
+  lastHeard = '';
+  matchScore = 0;
+  reciteStatus = '';
+
   private setQueue: number[] = [];
   private sessionBlocks: SessionBlock[] = [];
   private blockIndex = 0;
@@ -86,14 +132,20 @@ export class MemorizeComponent implements OnDestroy {
   private sessionToken = 0;
   /** What Resume/Continue should do after a sequential pause. */
   private afterPause: 'replay' | 'next-block' = 'next-block';
+  private recognition: SpeechRecognitionHandle | null = null;
+  private wantListening = false;
 
   @ViewChild('player') playerRef?: ElementRef<HTMLAudioElement>;
 
-  constructor(private readonly http: HttpClient) {
+  constructor(
+    private readonly http: HttpClient,
+    private readonly zone: NgZone
+  ) {
     this.loadSurahText(this.surahNumber);
   }
 
   ngOnDestroy(): void {
+    this.stopListening(true);
     this.stopSession();
   }
 
@@ -141,6 +193,21 @@ export class MemorizeComponent implements OnDestroy {
     return this.isPlaying || this.isPaused || this.awaitingContinue;
   }
 
+  get reciteTargetText(): string {
+    if (!this.reciteAyah) {
+      return '';
+    }
+    return this.ayahTexts.find((a) => a.number === this.reciteAyah)?.text ?? '';
+  }
+
+  get showAyahText(): boolean {
+    return !(this.isListening && this.hideTextWhileReciting);
+  }
+
+  get micButtonLabel(): string {
+    return this.isListening ? 'Stop mic' : 'Recite along';
+  }
+
   onSurahChange(raw: number | string): void {
     if (this.settingsLocked) {
       return;
@@ -150,7 +217,26 @@ export class MemorizeComponent implements OnDestroy {
     const max = getSurah(n)?.ayahCount ?? 1;
     this.fromAyah = 1;
     this.toAyah = Math.min(5, max);
+    this.stopListening(true);
     this.loadSurahText(n);
+  }
+
+  /** Open the parent mushaf viewer on the current / range start ayah. */
+  openMushafForCurrent(): void {
+    const ayah =
+      this.currentAyah ||
+      this.reciteAyah ||
+      this.fromAyah ||
+      1;
+    this.emitMushaf(ayah);
+  }
+
+  toggleListening(): void {
+    if (this.isListening) {
+      this.stopListening(false);
+      return;
+    }
+    this.startListening();
   }
 
   onFromChange(raw: number | string): void {
@@ -227,6 +313,168 @@ export class MemorizeComponent implements OnDestroy {
     this.blockKind = '';
   }
 
+  skipReciteAyah(): void {
+    if (!this.reciteAyah) {
+      return;
+    }
+    this.advanceReciteTarget();
+  }
+
+  private startListening(): void {
+    const Ctor = getSpeechRecognitionConstructor();
+    if (!Ctor) {
+      this.reciteStatus =
+        'Mic recite needs Chrome or Edge (Web Speech API).';
+      return;
+    }
+    if (this.isPlaying && !this.isPaused) {
+      this.pauseSession();
+    }
+    this.normalizeRange();
+    this.wantListening = true;
+    this.reciteAyah = this.reciteAyah
+      ? Math.max(this.fromAyah, Math.min(this.toAyah, this.reciteAyah))
+      : this.fromAyah;
+    this.lastHeard = '';
+    this.matchScore = 0;
+    this.reciteStatus = `Listening for ayah ${this.reciteAyah}…`;
+    this.emitMushaf(this.reciteAyah);
+
+    if (this.recognition) {
+      try {
+        this.recognition.abort();
+      } catch {
+        /* ignore */
+      }
+      this.recognition = null;
+    }
+
+    const recognition = new Ctor() as SpeechRecognitionHandle;
+    recognition.lang = 'ar-SA';
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+
+    recognition.onresult = (event) => {
+      this.zone.run(() => this.handleSpeechResult(event));
+    };
+    recognition.onerror = (event) => {
+      this.zone.run(() => {
+        const err = event.error || 'error';
+        if (err === 'aborted' || err === 'no-speech') {
+          return;
+        }
+        this.reciteStatus =
+          err === 'not-allowed'
+            ? 'Microphone permission blocked.'
+            : `Mic error: ${err}`;
+        if (err === 'not-allowed') {
+          this.stopListening(true);
+        }
+      });
+    };
+    recognition.onend = () => {
+      this.zone.run(() => {
+        this.isListening = false;
+        if (this.wantListening && this.recognition === recognition) {
+          try {
+            recognition.start();
+            this.isListening = true;
+          } catch {
+            this.reciteStatus = 'Mic stopped. Tap Recite along to restart.';
+            this.wantListening = false;
+          }
+        }
+      });
+    };
+
+    this.recognition = recognition;
+    try {
+      recognition.start();
+      this.isListening = true;
+    } catch {
+      this.reciteStatus = 'Could not start the microphone.';
+      this.wantListening = false;
+      this.recognition = null;
+    }
+  }
+
+  private stopListening(clearTarget: boolean): void {
+    this.wantListening = false;
+    this.isListening = false;
+    if (this.recognition) {
+      try {
+        this.recognition.onend = null;
+        this.recognition.abort();
+      } catch {
+        /* ignore */
+      }
+      this.recognition = null;
+    }
+    if (clearTarget) {
+      this.reciteAyah = 0;
+      this.lastHeard = '';
+      this.matchScore = 0;
+      this.reciteStatus = '';
+    } else if (this.reciteAyah) {
+      this.reciteStatus = `Paused on ayah ${this.reciteAyah}.`;
+    }
+  }
+
+  private handleSpeechResult(event: {
+    resultIndex: number;
+    results: ArrayLike<{ isFinal: boolean; 0: { transcript: string } }>;
+  }): void {
+    if (!this.wantListening || !this.reciteAyah) {
+      return;
+    }
+    let transcript = '';
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      transcript += event.results[i][0]?.transcript || '';
+    }
+    transcript = transcript.trim();
+    if (!transcript) {
+      return;
+    }
+    this.lastHeard = transcript;
+    const expected = this.reciteTargetText;
+    if (!expected) {
+      this.reciteStatus = 'Arabic text still loading…';
+      return;
+    }
+    const score = arabicSimilarity(transcript, expected);
+    this.matchScore = score;
+    const pct = Math.round(score * 100);
+    if (score >= this.matchThreshold) {
+      this.reciteStatus = `Matched ayah ${this.reciteAyah} (${pct}%).`;
+      this.advanceReciteTarget();
+      return;
+    }
+    this.reciteStatus = `Listening ayah ${this.reciteAyah} · ${pct}% match`;
+  }
+
+  private advanceReciteTarget(): void {
+    this.lastHeard = '';
+    this.matchScore = 0;
+    if (this.reciteAyah >= this.toAyah) {
+      this.reciteStatus = `Range complete (${this.fromAyah}–${this.toAyah}).`;
+      this.stopListening(false);
+      return;
+    }
+    this.reciteAyah += 1;
+    this.reciteStatus = `Listening for ayah ${this.reciteAyah}…`;
+    this.emitMushaf(this.reciteAyah);
+  }
+
+  private emitMushaf(ayahNumber: number): void {
+    const page = pageWithinSurahForAyah(
+      this.surahNumber,
+      ayahNumber,
+      this.currentSurah.ayahCount
+    );
+    this.openMushaf.emit({ surahNumber: this.surahNumber, page });
+  }
+
   onAudioEnded(): void {
     if (!this.isPlaying || this.isPaused || this.awaitingContinue) {
       return;
@@ -282,6 +530,7 @@ export class MemorizeComponent implements OnDestroy {
   }
 
   private startSession(): void {
+    this.stopListening(true);
     this.normalizeRange();
     this.sessionBlocks = this.intelliJMode
       ? this.buildIntelliJBlocks()
@@ -389,6 +638,9 @@ export class MemorizeComponent implements OnDestroy {
       return;
     }
     this.currentAyah = ayah;
+    if (this.followMushaf) {
+      this.emitMushaf(ayah);
+    }
     const kindLabel = this.blockKind === 'new' ? 'New ayah' : 'Set';
     this.statusMessage = `${kindLabel}: ${this.currentSetLabel} · ${this.setRepeat}/${this.setRepeatTotal} · ayah ${ayah}`;
     audio.src = everyAyahUrl(this.surahNumber, ayah, this.reciterId);

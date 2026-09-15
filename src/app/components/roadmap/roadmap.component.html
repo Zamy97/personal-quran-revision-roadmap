@@ -225,7 +225,7 @@
     class="memorize-workspace"
     [hidden]="activeTab !== 'memorize'"
   >
-    <app-memorize></app-memorize>
+    <app-memorize (openMushaf)="onMemorizeOpenMushaf($event)"></app-memorize>
   </div>
 
   <section

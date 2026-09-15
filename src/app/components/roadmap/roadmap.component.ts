@@ -654,6 +654,23 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
     this.scheduleMushafRender();
   }
 
+  /** Mushaf open / page sync from the Memorize tab (ayah-based page estimate). */
+  onMemorizeOpenMushaf(req: { surahNumber: number; page: number }): void {
+    if (this.mushafOpen && this.mushafSurahNumber === req.surahNumber) {
+      const page = this.normalizeMushafPage(req.page);
+      if (page === this.mushafPage) {
+        return;
+      }
+    }
+    // Prefer single page so ayah jumps land on a clear spread.
+    if (!this.mushafOpen) {
+      this.mushafTwoPage = false;
+    }
+    // Memorize drives the page — don't fight with revision audio follow.
+    this.mushafFollowSuspended = true;
+    this.openMushaf(req.surahNumber, req.page);
+  }
+
   openMemorizedPortion(portion: MemorizedPortion): void {
     const pageCount = pageCountForSurah(portion.surahNumber);
     const page =
