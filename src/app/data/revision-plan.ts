@@ -7,7 +7,7 @@ export const RETENTION_REMINDERS: RetentionReminder[] = [
   {
     title: 'Eliminate the Gap',
     detail:
-      'Repeating this 3-day loop twice a week means you never go more than 2 days without seeing a surah. Surahs like Nuh and Al-Jinn stay fresh.'
+      'Repeating this 3-day loop twice a week means you never go more than 2 days without seeing a surah. Keep newer Juz 29 surahs (Muzzammil–Qiyamah) especially warm.'
   },
   {
     title: 'The Commute Hack',
@@ -17,7 +17,7 @@ export const RETENTION_REMINDERS: RetentionReminder[] = [
   {
     title: 'Rebuilding Weak Surahs',
     detail:
-      'For the first 2 weeks, don\'t test your memory on Nuh or Al-Jinn. Read them directly from the mushaf on Tuesday and Friday until they feel smooth.'
+      'For the first 2 weeks, don\'t test your memory hard on Al-Muzzammil, Al-Muddaththir, or Al-Qiyamah. Read them from the mushaf on Tuesday and Friday until they feel smooth.'
   }
 ];
 
@@ -30,7 +30,7 @@ export interface ManzilDay {
   surahNumbers: number[];
 }
 
-export const DEFAULT_SURAH_NUMBER = 74;
+export const DEFAULT_SURAH_NUMBER = 76;
 
 const JUZ_30: number[] = [
   78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96,
@@ -52,9 +52,10 @@ const LOOP_A = {
 
 const LOOP_B = {
   focusTitle: 'Core Surahs & Juz 29 (Second Half)',
-  focusDetail: 'As-Sajda, Ar-Rahman, Al-Waqi\'ah, Ad-Dukhan + Nuh & Al-Jinn',
-  estimatedVolume: '~15 Pages',
-  surahNumbers: [32, 55, 56, 44, 71, 72]
+  focusDetail:
+    'As-Sajda, Ar-Rahman, Al-Waqi\'ah, Ad-Dukhan + Nuh through Al-Qiyamah',
+  estimatedVolume: '~21 Pages',
+  surahNumbers: [32, 55, 56, 44, 71, 72, 73, 74, 75]
 };
 
 const LOOP_C = {
