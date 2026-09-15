@@ -4,17 +4,19 @@
       <span class="eyebrow">Hifz companion</span>
       <h2 id="memorize-heading">Memorize</h2>
       <p>
-        IntelliJ-style verse sets with auto-repeat — audio from
+        Intelligent successive sets — audio from
         <a href="https://everyayah.com/" target="_blank" rel="noopener noreferrer"
           >EveryAyah</a
         >.
       </p>
     </div>
-    <div class="memorize-live" *ngIf="isPlaying || currentSetLabel">
+    <div class="memorize-live" *ngIf="isPlaying || awaitingContinue || currentSetLabel">
       <strong>{{ currentSetLabel || 'Ready' }}</strong>
-      <span *ngIf="setRepeatTotal"
-        >Repeat {{ setRepeat }}/{{ setRepeatTotal }}</span
-      >
+      <span *ngIf="setRepeatTotal">
+        {{ blockKind === 'new' ? 'New ayah' : 'Set' }}
+        {{ setRepeat }}/{{ setRepeatTotal }}
+      </span>
+      <span *ngIf="awaitingContinue">Sequential pause</span>
     </div>
   </div>
 
@@ -22,7 +24,11 @@
     <aside class="memorize-controls" aria-label="Memorize settings">
       <label class="field">
         <span>Surah</span>
-        <select [ngModel]="surahNumber" (ngModelChange)="onSurahChange($event)">
+        <select
+          [ngModel]="surahNumber"
+          (ngModelChange)="onSurahChange($event)"
+          [disabled]="settingsLocked"
+        >
           <option *ngFor="let s of surahs" [ngValue]="s.number">
             {{ surahLabel(s) }}
           </option>
@@ -32,63 +38,120 @@
       <div class="range-row">
         <label class="field">
           <span>From</span>
-          <select [ngModel]="fromAyah" (ngModelChange)="onFromChange($event)">
+          <select
+            [ngModel]="fromAyah"
+            (ngModelChange)="onFromChange($event)"
+            [disabled]="settingsLocked"
+          >
             <option *ngFor="let a of ayahOptions" [ngValue]="a">{{ a }}</option>
           </select>
         </label>
         <label class="field">
           <span>To</span>
-          <select [ngModel]="toAyah" (ngModelChange)="onToChange($event)">
+          <select
+            [ngModel]="toAyah"
+            (ngModelChange)="onToChange($event)"
+            [disabled]="settingsLocked"
+          >
             <option *ngFor="let a of ayahOptions" [ngValue]="a">{{ a }}</option>
           </select>
         </label>
       </div>
 
-      <label class="field">
-        <span>Mode</span>
-        <select [(ngModel)]="mode">
-          <option *ngFor="let m of modes" [ngValue]="m.id">{{ m.label }}</option>
-        </select>
+      <label class="toggle">
+        <input
+          type="checkbox"
+          [(ngModel)]="intelliJMode"
+          [disabled]="settingsLocked"
+        />
+        <span>Intelligent mode (IntelliJ)</span>
       </label>
-      <p class="hint">{{ modeHint }}</p>
+      <p class="hint">{{ intelliJHint }}</p>
 
-      <div class="range-row">
-        <label class="field">
-          <span>Window</span>
-          <select [(ngModel)]="windowSize" [disabled]="mode === 'loop'">
-            <option *ngFor="let n of windowChoices" [ngValue]="n">{{ n }}</option>
+      <ng-container *ngIf="intelliJMode; else simpleLoop">
+        <div class="range-row">
+          <label class="field">
+            <span>New ayah repeat</span>
+            <select [(ngModel)]="newAyahRepeats" [disabled]="settingsLocked">
+              <option *ngFor="let n of repeatChoices" [ngValue]="n">×{{ n }}</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Set times</span>
+            <select [(ngModel)]="setRepeats" [disabled]="settingsLocked">
+              <option *ngFor="let n of repeatChoices" [ngValue]="n">×{{ n }}</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="range-row">
+          <label class="field">
+            <span>Window size</span>
+            <select
+              [(ngModel)]="windowSize"
+              [disabled]="settingsLocked || !movingWindow"
+            >
+              <option *ngFor="let n of windowChoices" [ngValue]="n">{{ n }}</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Ayah gap</span>
+            <select [(ngModel)]="ayahDelayMs" [disabled]="settingsLocked">
+              <option *ngFor="let n of delayChoices" [ngValue]="n">
+                {{ n === 0 ? 'None' : n + ' ms' }}
+              </option>
+            </select>
+          </label>
+        </div>
+
+        <label class="toggle">
+          <input
+            type="checkbox"
+            [(ngModel)]="movingWindow"
+            [disabled]="settingsLocked"
+          />
+          <span>Moving window</span>
+        </label>
+
+        <label class="toggle">
+          <input
+            type="checkbox"
+            [(ngModel)]="sequentialPause"
+            [disabled]="settingsLocked"
+          />
+          <span>Sequential pause (revise in your head)</span>
+        </label>
+
+        <label class="field" *ngIf="sequentialPause">
+          <span>Pause length</span>
+          <select [(ngModel)]="sequentialPauseMs" [disabled]="settingsLocked">
+            <option *ngFor="let n of pauseChoices" [ngValue]="n">
+              {{ n / 1000 }}s
+            </option>
           </select>
         </label>
+      </ng-container>
+
+      <ng-template #simpleLoop>
         <label class="field">
-          <span>Repeats / set</span>
-          <select [(ngModel)]="repeats">
+          <span>Loop repeats</span>
+          <select [(ngModel)]="loopRepeats" [disabled]="settingsLocked">
             <option *ngFor="let n of repeatChoices" [ngValue]="n">×{{ n }}</option>
           </select>
         </label>
-      </div>
-
-      <div class="range-row">
         <label class="field">
           <span>Ayah gap</span>
-          <select [(ngModel)]="ayahDelayMs">
+          <select [(ngModel)]="ayahDelayMs" [disabled]="settingsLocked">
             <option *ngFor="let n of delayChoices" [ngValue]="n">
               {{ n === 0 ? 'None' : n + ' ms' }}
             </option>
           </select>
         </label>
-        <label class="field">
-          <span>Set gap</span>
-          <select [(ngModel)]="setDelayMs">
-            <option *ngFor="let n of delayChoices" [ngValue]="n">
-              {{ n === 0 ? 'None' : n + ' ms' }}
-            </option>
-          </select>
-        </label>
-      </div>
+      </ng-template>
 
       <label class="field">
         <span>Reciter (EveryAyah)</span>
-        <select [(ngModel)]="reciterId">
+        <select [(ngModel)]="reciterId" [disabled]="settingsLocked">
           <option *ngFor="let r of reciters" [ngValue]="r.id">{{ r.label }}</option>
         </select>
       </label>
@@ -104,7 +167,7 @@
         <button
           type="button"
           class="btn ghost"
-          [disabled]="!isPlaying && !isPaused"
+          [disabled]="!isPlaying && !isPaused && !awaitingContinue"
           (click)="stopSession()"
         >
           Stop

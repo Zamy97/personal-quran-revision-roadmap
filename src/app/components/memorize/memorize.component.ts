@@ -12,11 +12,17 @@ import {
   everyAyahUrl
 } from '../../data/everyayah-reciters';
 
-type MemorizeMode = 'grow' | 'slide' | 'loop';
-
 interface AyahText {
   number: number;
   text: string;
+}
+
+/** One playable block: a list of ayahs repeated N times. */
+interface SessionBlock {
+  ayahs: number[];
+  repeats: number;
+  kind: 'new' | 'set';
+  label: string;
 }
 
 @Component({
@@ -28,35 +34,32 @@ export class MemorizeComponent implements OnDestroy {
   readonly surahs = SURAHS;
   readonly surahLabel = surahLabel;
   readonly reciters = EVERYAYAH_RECITERS;
-  readonly modes: { id: MemorizeMode; label: string; hint: string }[] = [
-    {
-      id: 'grow',
-      label: 'IntelliJ · Grow',
-      hint: 'Build up: 1 → 1–2 → 1–2–3… then keep the window sliding'
-    },
-    {
-      id: 'slide',
-      label: 'Moving window',
-      hint: 'Fixed-size window that slides forward through the range'
-    },
-    {
-      id: 'loop',
-      label: 'Loop range',
-      hint: 'Repeat the full from–to range as one set'
-    }
-  ];
-  readonly repeatChoices = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20];
-  readonly windowChoices = [1, 2, 3, 4, 5, 6, 7, 8];
+  readonly repeatChoices = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 30, 50];
+  readonly windowChoices = [2, 3, 4, 5, 6, 7, 8, 9, 10];
   readonly delayChoices = [0, 250, 500, 750, 1000, 1500, 2000, 3000];
+  readonly pauseChoices = [2000, 3000, 4000, 5000, 6000, 8000, 10000, 15000];
 
   surahNumber = 67;
   fromAyah = 1;
   toAyah = 5;
-  windowSize = 3;
-  repeats = 3;
-  ayahDelayMs = 500;
-  setDelayMs = 1000;
-  mode: MemorizeMode = 'grow';
+
+  /** Intelligent / IntelliJ mode (builds successive sets automatically). */
+  intelliJMode = true;
+  /** Times each newly introduced ayah plays alone. */
+  newAyahRepeats = 3;
+  /** Times the growing set (1–2, 1–2–3, …) plays after each new ayah. */
+  setRepeats = 2;
+  /** Max ayahs in one grow window before sliding (moving window). */
+  windowSize = 5;
+  movingWindow = false;
+  /** After a set finishes, pause so you can revise it in your head. */
+  sequentialPause = true;
+  sequentialPauseMs = 4000;
+
+  /** Used only when IntelliJ is off: loop the full from–to range. */
+  loopRepeats = 3;
+
+  ayahDelayMs = 400;
   reciterId = DEFAULT_EVERYAYAH_RECITER_ID;
 
   ayahTexts: AyahText[] = [];
@@ -65,20 +68,22 @@ export class MemorizeComponent implements OnDestroy {
 
   isPlaying = false;
   isPaused = false;
+  awaitingContinue = false;
   statusMessage = '';
   currentAyah = 0;
   currentSetLabel = '';
   setRepeat = 0;
   setRepeatTotal = 0;
+  blockKind: 'new' | 'set' | '' = '';
 
-  /** Queue of ayah numbers for the active set. */
   private setQueue: number[] = [];
-  /** All sets for the session (each is an ayah list). */
-  private sessionSets: number[][] = [];
-  private setIndex = 0;
+  private sessionBlocks: SessionBlock[] = [];
+  private blockIndex = 0;
   private ayahIndexInSet = 0;
   private delayTimer?: ReturnType<typeof setTimeout>;
   private sessionToken = 0;
+  /** What Resume/Continue should do after a sequential pause. */
+  private afterPause: 'replay' | 'next-block' = 'next-block';
 
   @ViewChild('player') playerRef?: ElementRef<HTMLAudioElement>;
 
@@ -102,6 +107,9 @@ export class MemorizeComponent implements OnDestroy {
   }
 
   get playButtonLabel(): string {
+    if (this.awaitingContinue) {
+      return '▶ Continue';
+    }
     if (this.isPlaying && !this.isPaused) {
       return '❚❚ Pause';
     }
@@ -111,25 +119,42 @@ export class MemorizeComponent implements OnDestroy {
     return '▶ Start';
   }
 
-  get modeHint(): string {
-    return this.modes.find((m) => m.id === this.mode)?.hint ?? '';
+  get intelliJHint(): string {
+    if (!this.intelliJMode) {
+      return 'Simple loop: plays the full from–to range with the loop repeat count.';
+    }
+    return (
+      'New ayah alone × new-ayah repeats, then the growing set × set times. ' +
+      (this.movingWindow
+        ? 'Moving window slides the start forward after each full window.'
+        : 'Grows from your start ayah through the end of the range.')
+    );
   }
 
   get highlightedAyahs(): Set<number> {
     return new Set(this.setQueue);
   }
 
+  get settingsLocked(): boolean {
+    return this.isPlaying || this.isPaused || this.awaitingContinue;
+  }
+
   onSurahChange(raw: number | string): void {
+    if (this.settingsLocked) {
+      return;
+    }
     const n = Number(raw);
     this.surahNumber = n;
     const max = getSurah(n)?.ayahCount ?? 1;
     this.fromAyah = 1;
     this.toAyah = Math.min(5, max);
-    this.stopSession();
     this.loadSurahText(n);
   }
 
   onFromChange(raw: number | string): void {
+    if (this.settingsLocked) {
+      return;
+    }
     this.fromAyah = Number(raw);
     if (this.toAyah < this.fromAyah) {
       this.toAyah = this.fromAyah;
@@ -137,6 +162,9 @@ export class MemorizeComponent implements OnDestroy {
   }
 
   onToChange(raw: number | string): void {
+    if (this.settingsLocked) {
+      return;
+    }
     this.toAyah = Number(raw);
     if (this.fromAyah > this.toAyah) {
       this.fromAyah = this.toAyah;
@@ -144,6 +172,10 @@ export class MemorizeComponent implements OnDestroy {
   }
 
   togglePlay(): void {
+    if (this.awaitingContinue) {
+      this.continueAfterPause();
+      return;
+    }
     if (this.isPlaying && !this.isPaused) {
       this.pauseSession();
       return;
@@ -169,21 +201,23 @@ export class MemorizeComponent implements OnDestroy {
     }
     this.isPlaying = false;
     this.isPaused = false;
+    this.awaitingContinue = false;
     this.currentAyah = 0;
     this.currentSetLabel = '';
     this.setQueue = [];
-    this.sessionSets = [];
-    this.setIndex = 0;
+    this.sessionBlocks = [];
+    this.blockIndex = 0;
     this.ayahIndexInSet = 0;
     this.setRepeat = 0;
     this.setRepeatTotal = 0;
+    this.blockKind = '';
   }
 
   onAudioEnded(): void {
-    if (!this.isPlaying || this.isPaused) {
+    if (!this.isPlaying || this.isPaused || this.awaitingContinue) {
       return;
     }
-    this.scheduleNext(this.ayahDelayMs);
+    this.scheduleNext(this.ayahDelayMs, () => this.advanceAfterAyah());
   }
 
   onAudioError(): void {
@@ -192,7 +226,7 @@ export class MemorizeComponent implements OnDestroy {
     }
     this.statusMessage =
       'Could not load that verse audio from EveryAyah — skipping.';
-    this.scheduleNext(300);
+    this.scheduleNext(300, () => this.advanceAfterAyah());
   }
 
   trackAyah(_: number, ayah: AyahText): number {
@@ -220,21 +254,34 @@ export class MemorizeComponent implements OnDestroy {
     this.playCurrentAyah();
   }
 
+  private continueAfterPause(): void {
+    this.awaitingContinue = false;
+    this.isPlaying = true;
+    this.isPaused = false;
+    if (this.afterPause === 'replay') {
+      this.ayahIndexInSet = 0;
+      this.playCurrentAyah();
+      return;
+    }
+    this.advanceToNextBlock();
+  }
+
   private startSession(): void {
     this.normalizeRange();
-    this.sessionSets = this.buildSets();
-    if (!this.sessionSets.length) {
+    this.sessionBlocks = this.intelliJMode
+      ? this.buildIntelliJBlocks()
+      : this.buildLoopBlocks();
+    if (!this.sessionBlocks.length) {
       this.statusMessage = 'Nothing to play in that range.';
       return;
     }
     this.sessionToken += 1;
     this.isPlaying = true;
     this.isPaused = false;
-    this.setIndex = 0;
+    this.awaitingContinue = false;
+    this.blockIndex = 0;
     this.ayahIndexInSet = 0;
-    this.setRepeat = 1;
-    this.setRepeatTotal = this.repeats;
-    this.activateSet(0);
+    this.activateBlock(0);
     this.playCurrentAyah();
   }
 
@@ -247,52 +294,77 @@ export class MemorizeComponent implements OnDestroy {
     );
   }
 
-  /**
-   * IntelliJ-style set builder:
-   * - grow: 1; 1–2; … up to window; then slide
-   * - slide: fixed window across the range
-   * - loop: one set = full from–to
-   */
-  private buildSets(): number[][] {
-    const start = this.fromAyah;
-    const end = this.toAyah;
-    const w = Math.max(1, this.windowSize);
-    const sets: number[][] = [];
-
-    if (this.mode === 'loop') {
-      sets.push(range(start, end));
-      return sets;
-    }
-
-    if (this.mode === 'grow') {
-      const growEnd = Math.min(end, start + w - 1);
-      for (let last = start; last <= growEnd; last++) {
-        sets.push(range(start, last));
+  private buildLoopBlocks(): SessionBlock[] {
+    const ayahs = range(this.fromAyah, this.toAyah);
+    return [
+      {
+        ayahs,
+        repeats: Math.max(1, this.loopRepeats),
+        kind: 'set',
+        label: labelFor(ayahs)
       }
-      for (let first = start + 1; first + w - 1 <= end; first++) {
-        sets.push(range(first, first + w - 1));
-      }
-      return sets;
-    }
-
-    // slide
-    if (end - start + 1 <= w) {
-      sets.push(range(start, end));
-      return sets;
-    }
-    for (let first = start; first + w - 1 <= end; first++) {
-      sets.push(range(first, first + w - 1));
-    }
-    return sets;
+    ];
   }
 
-  private activateSet(index: number): void {
-    this.setIndex = index;
-    this.setQueue = this.sessionSets[index] ?? [];
+  /**
+   * IntelliJ mode (Memorize Quran app):
+   * For each new ayah A in a window starting at S:
+   *   1) play [A] alone × newAyahRepeats
+   *   2) if A > S, play range(S..A) × setRepeats
+   * With moving window: after finishing S..(S+window-1), slide S forward by 1.
+   */
+  private buildIntelliJBlocks(): SessionBlock[] {
+    const start = this.fromAyah;
+    const end = this.toAyah;
+    const window = Math.max(2, this.windowSize);
+    const newReps = Math.max(1, this.newAyahRepeats);
+    const setReps = Math.max(1, this.setRepeats);
+    const blocks: SessionBlock[] = [];
+
+    const buildWindow = (windowStart: number, windowEnd: number): void => {
+      for (let ayah = windowStart; ayah <= windowEnd; ayah++) {
+        blocks.push({
+          ayahs: [ayah],
+          repeats: newReps,
+          kind: 'new',
+          label: `New ayah ${ayah}`
+        });
+        if (ayah > windowStart) {
+          const set = range(windowStart, ayah);
+          blocks.push({
+            ayahs: set,
+            repeats: setReps,
+            kind: 'set',
+            label: labelFor(set)
+          });
+        }
+      }
+    };
+
+    if (!this.movingWindow || end - start + 1 <= window) {
+      buildWindow(start, end);
+      return blocks;
+    }
+
+    for (
+      let windowStart = start;
+      windowStart + window - 1 <= end;
+      windowStart++
+    ) {
+      buildWindow(windowStart, windowStart + window - 1);
+    }
+    return blocks;
+  }
+
+  private activateBlock(index: number): void {
+    const block = this.sessionBlocks[index];
+    this.blockIndex = index;
+    this.setQueue = block?.ayahs ?? [];
     this.ayahIndexInSet = 0;
-    this.currentSetLabel = this.setQueue.length
-      ? `Ayahs ${this.setQueue[0]}–${this.setQueue[this.setQueue.length - 1]}`
-      : '';
+    this.setRepeat = 1;
+    this.setRepeatTotal = block?.repeats ?? 0;
+    this.blockKind = block?.kind ?? '';
+    this.currentSetLabel = block?.label ?? '';
   }
 
   private playCurrentAyah(): void {
@@ -302,7 +374,8 @@ export class MemorizeComponent implements OnDestroy {
       return;
     }
     this.currentAyah = ayah;
-    this.statusMessage = `${this.currentSetLabel} · repeat ${this.setRepeat}/${this.setRepeatTotal} · ayah ${ayah}`;
+    const kindLabel = this.blockKind === 'new' ? 'New ayah' : 'Set';
+    this.statusMessage = `${kindLabel}: ${this.currentSetLabel} · ${this.setRepeat}/${this.setRepeatTotal} · ayah ${ayah}`;
     audio.src = everyAyahUrl(this.surahNumber, ayah, this.reciterId);
     audio.load();
     audio.play().catch(() => {
@@ -311,7 +384,7 @@ export class MemorizeComponent implements OnDestroy {
     });
   }
 
-  private scheduleNext(delayMs: number): void {
+  private scheduleNext(delayMs: number, action: () => void): void {
     const token = this.sessionToken;
     if (this.delayTimer) {
       clearTimeout(this.delayTimer);
@@ -320,7 +393,10 @@ export class MemorizeComponent implements OnDestroy {
       if (token !== this.sessionToken || this.isPaused || !this.isPlaying) {
         return;
       }
-      this.advanceAfterAyah();
+      if (this.awaitingContinue) {
+        return;
+      }
+      action();
     }, Math.max(0, delayMs));
   }
 
@@ -331,36 +407,77 @@ export class MemorizeComponent implements OnDestroy {
       return;
     }
 
-    // Finished one pass of the current set.
+    // Finished one pass of the current block.
     if (this.setRepeat < this.setRepeatTotal) {
       this.setRepeat += 1;
       this.ayahIndexInSet = 0;
-      this.delayTimer = setTimeout(() => {
-        if (!this.isPlaying || this.isPaused) {
-          return;
-        }
-        this.playCurrentAyah();
-      }, this.setDelayMs);
+      if (this.shouldSequentialPause()) {
+        this.enterSequentialPause(
+          `Revise ${this.currentSetLabel} in your head…`,
+          'replay'
+        );
+        return;
+      }
+      this.scheduleNext(this.ayahDelayMs, () => this.playCurrentAyah());
       return;
     }
 
-    // Next set.
-    if (this.setIndex + 1 < this.sessionSets.length) {
-      this.setRepeat = 1;
-      this.activateSet(this.setIndex + 1);
-      this.delayTimer = setTimeout(() => {
-        if (!this.isPlaying || this.isPaused) {
-          return;
-        }
-        this.playCurrentAyah();
-      }, this.setDelayMs);
+    // Finished all repeats for this block.
+    if (this.shouldSequentialPause() && this.blockKind === 'set') {
+      this.enterSequentialPause(
+        `Set done — revise ${this.currentSetLabel} in your head, then continue.`,
+        'next-block'
+      );
       return;
     }
 
+    this.advanceToNextBlock();
+  }
+
+  private shouldSequentialPause(): boolean {
+    return (
+      this.intelliJMode &&
+      this.sequentialPause &&
+      this.setQueue.length > 1
+    );
+  }
+
+  private enterSequentialPause(
+    message: string,
+    next: 'replay' | 'next-block'
+  ): void {
+    this.afterPause = next;
+    this.awaitingContinue = true;
+    this.statusMessage = message;
+    const audio = this.playerRef?.nativeElement;
+    audio?.pause();
+
+    // Auto-continue after the pause duration (user can also tap Continue).
+    const token = this.sessionToken;
+    if (this.delayTimer) {
+      clearTimeout(this.delayTimer);
+    }
+    this.delayTimer = setTimeout(() => {
+      if (token !== this.sessionToken || !this.awaitingContinue) {
+        return;
+      }
+      this.continueAfterPause();
+    }, Math.max(500, this.sequentialPauseMs));
+  }
+
+  private advanceToNextBlock(): void {
+    if (this.blockIndex + 1 < this.sessionBlocks.length) {
+      this.activateBlock(this.blockIndex + 1);
+      this.playCurrentAyah();
+      return;
+    }
     this.statusMessage = 'Session complete.';
     this.isPlaying = false;
     this.isPaused = false;
+    this.awaitingContinue = false;
     this.currentAyah = 0;
+    this.setQueue = [];
+    this.blockKind = '';
   }
 
   private loadSurahText(surahNumber: number): void {
@@ -399,4 +516,14 @@ function range(from: number, to: number): number[] {
     out.push(i);
   }
   return out;
+}
+
+function labelFor(ayahs: number[]): string {
+  if (!ayahs.length) {
+    return '';
+  }
+  if (ayahs.length === 1) {
+    return `Ayah ${ayahs[0]}`;
+  }
+  return `Ayahs ${ayahs[0]}–${ayahs[ayahs.length - 1]}`;
 }
