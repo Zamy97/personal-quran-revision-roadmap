@@ -1,27 +1,3 @@
-export type DailyTaskId = 'sabaqSabqi' | 'manzil';
-
-export interface DailyBlueprintItem {
-  id: DailyTaskId;
-  order: number;
-  title: string;
-  duration: string;
-}
-
-export const DAILY_BLUEPRINT: DailyBlueprintItem[] = [
-  {
-    id: 'sabaqSabqi',
-    order: 1,
-    title: 'Sabaq & Sabqi (New Content)',
-    duration: '25–30 min'
-  },
-  {
-    id: 'manzil',
-    order: 2,
-    title: 'Manzil (High-Frequency Revision)',
-    duration: '45–60 min'
-  }
-];
-
 export interface RetentionReminder {
   title: string;
   detail: string;

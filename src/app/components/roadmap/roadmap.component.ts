@@ -9,12 +9,9 @@ import {
 } from '@angular/core';
 import { Subscription } from 'rxjs';
 import {
-  DAILY_BLUEPRINT,
-  DailyBlueprintItem,
   ManzilDay,
   RETENTION_REMINDERS,
-  WEEKLY_MANZIL,
-  isCoreManzilSurah
+  WEEKLY_MANZIL
 } from '../../data/revision-plan';
 import {
   documentPageForSurah,
@@ -32,11 +29,8 @@ import {
   RECITERS,
   getReciter
 } from '../../data/reciters';
-import { SURAHS, Surah, formatSurahName, getSurah, surahLabel } from '../../data/surahs';
-import {
-  MemorizationProgress,
-  todayKey
-} from '../../models/progress.model';
+import { Surah, formatSurahName, getSurah, surahLabel } from '../../data/surahs';
+import { MemorizationProgress, todayKey } from '../../models/progress.model';
 import { ProgressService } from '../../services/progress.service';
 import {
   PDFDocumentProxy,
@@ -53,17 +47,15 @@ configurePdfWorker();
   styleUrl: './roadmap.component.css'
 })
 export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
-  readonly blueprint = DAILY_BLUEPRINT;
   readonly reminders = RETENTION_REMINDERS;
   readonly manzilLoop: ManzilDay[] = WEEKLY_MANZIL;
   readonly surahLabel = surahLabel;
-  readonly totalTasks = DAILY_BLUEPRINT.length;
   readonly reciters = RECITERS;
   readonly memorizedPortions = MEMORIZED_PORTIONS;
   readonly memorizedByJuz = MEMORIZED_BY_JUZ;
 
   progress: MemorizationProgress;
-  activeTab: 'roadmap' | 'memorized' = 'roadmap';
+  activeTab: 'roadmap' | 'memorized' | 'memorize' = 'roadmap';
   todayLabel = '';
   todayWeekday = '';
   /** Calendar weekday’s manzil (always “today”). */
@@ -73,7 +65,6 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
    * (reload always lands on the calendar day again).
    */
   selectedManzil!: ManzilDay;
-  ayahOptions: number[] = [];
   statusMessage = '';
   playingSurah: number | null = null;
   isAudioPlaying = false;
@@ -131,7 +122,6 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
 
   constructor(private readonly progressService: ProgressService) {
     this.progress = this.progressService.snapshot;
-    this.syncDerivedState(this.progress);
     this.darkMode = this.readStoredTheme();
     this.applyTheme(this.darkMode);
   }
@@ -141,7 +131,6 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
     this.startDayWatcher();
     this.sub = this.progressService.progress$.subscribe((progress) => {
       this.progress = progress;
-      this.syncDerivedState(progress);
     });
   }
 
@@ -282,15 +271,6 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
     this.pdfDoc = null;
     this.pdfLoadPromise = null;
     this.loadedPdfUrl = null;
-  }
-
-  get currentSurah(): Surah | undefined {
-    return getSurah(this.progress.currentSurahNumber);
-  }
-
-  get canAdvanceSurah(): boolean {
-    const surah = this.currentSurah;
-    return !!surah && this.progress.currentAyah >= surah.ayahCount;
   }
 
   /** Surahs for the selected manzil day (Listen / Play all / Mushaf list). */
@@ -1038,72 +1018,6 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  /** Phase picker hides surahs already covered by the weekly plan. */
-  get phaseOptions(): Surah[] {
-    const current = this.progress.currentSurahNumber;
-    return SURAHS.filter(
-      (s) => s.number === current || !isCoreManzilSurah(s.number)
-    );
-  }
-
-  taskCopy(item: DailyBlueprintItem): string {
-    const phase = this.progress?.currentPhase || 'current surah';
-    const ayah = this.progress?.currentAyah || 0;
-
-    switch (item.id) {
-      case 'sabaqSabqi': {
-        const sabqi =
-          ayah > 0
-            ? `recite ${phase} from verse 1 to ayah ${ayah}`
-            : `recite ${phase} from verse 1 to today's lines`;
-        return `First 15m: memorize 2–3 new lines of ${phase}. Next 15m: ${sabqi}, plus the last surah you fully finished.`;
-      }
-      case 'manzil':
-        return `Follow today's day-by-day schedule: ${this.todayManzil.focusTitle}.`;
-      default:
-        return '';
-    }
-  }
-
-  isDone(item: DailyBlueprintItem): boolean {
-    return !!this.progress?.daily?.[item.id];
-  }
-
-  toggle(item: DailyBlueprintItem): void {
-    this.progressService.toggleTask(item.id);
-  }
-
-  onPhaseChange(raw: string): void {
-    const number = Number(raw);
-    this.progressService.setCurrentSurah(number);
-    this.flash(`Phase set to ${formatSurahName(number)}.`);
-  }
-
-  onAyahChange(raw: string): void {
-    this.progressService.setCurrentAyah(Number(raw));
-    this.flash('Ayah progress updated.');
-  }
-
-  advanceSurah(): void {
-    const finished = formatSurahName(this.progress.currentSurahNumber);
-    const advanced = this.progressService.advanceToNextSurah();
-    this.flash(
-      advanced
-        ? `${finished} done. Moved to the next surah.`
-        : `${finished} done. You reached the end of the mushaf list.`
-    );
-  }
-
-  markAllDone(): void {
-    this.progressService.markAllDone();
-    this.flash('All daily tasks marked complete.');
-  }
-
-  resetToday(): void {
-    this.progressService.resetToday();
-    this.flash('Today\'s checklist cleared.');
-  }
-
   downloadBackup(): void {
     const blob = new Blob([this.progressService.exportJson()], {
       type: 'application/json'
@@ -1130,21 +1044,6 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
       input.value = '';
     };
     reader.readAsText(file);
-  }
-
-  completedCount(): number {
-    const d = this.progress?.daily;
-    if (!d) {
-      return 0;
-    }
-    return Number(d.sabaqSabqi) + Number(d.manzil);
-  }
-
-  private syncDerivedState(progress: MemorizationProgress): void {
-    const surah = getSurah(progress.currentSurahNumber);
-    this.ayahOptions = surah
-      ? Array.from({ length: surah.ayahCount + 1 }, (_, i) => i)
-      : [0];
   }
 
   private startAudio(surahNumber: number): void {

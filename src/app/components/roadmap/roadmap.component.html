@@ -1,20 +1,8 @@
 <div class="page">
-  <header class="topbar" [class.compact]="activeTab !== 'roadmap'">
+  <header class="topbar compact">
     <div class="brand">
       <h1>Revision Roadmap</h1>
       <p>{{ todayLabel }}</p>
-    </div>
-
-    <div class="phase-strip" [hidden]="activeTab !== 'roadmap'">
-      <span class="phase-label">Phase</span>
-      <strong>{{ progress.currentPhase }}</strong>
-      <span class="phase-meta" *ngIf="progress.currentAyah > 0">
-        Ayah {{ progress.currentAyah }}<ng-container *ngIf="currentSurah">/{{ currentSurah.ayahCount }}</ng-container>
-      </span>
-      <span class="phase-meta">{{ completedCount() }}/{{ totalTasks }} today</span>
-      <div class="phase-progress" aria-hidden="true">
-        <div class="phase-progress-fill" [style.width.%]="(completedCount() / totalTasks) * 100"></div>
-      </div>
     </div>
 
     <div class="top-actions">
@@ -27,10 +15,6 @@
       >
         {{ darkMode ? 'Light' : 'Dark' }}
       </button>
-      <ng-container *ngIf="activeTab === 'roadmap'">
-        <button type="button" class="btn ghost" (click)="resetToday()">Reset</button>
-        <button type="button" class="btn solid" (click)="markAllDone()">All done</button>
-      </ng-container>
       <button type="button" class="btn ghost" (click)="downloadBackup()">Backup</button>
       <label class="btn solid file-btn">
         Restore
@@ -50,6 +34,14 @@
     </button>
     <button
       type="button"
+      [class.active]="activeTab === 'memorize'"
+      [attr.aria-selected]="activeTab === 'memorize'"
+      (click)="activeTab = 'memorize'"
+    >
+      Memorize
+    </button>
+    <button
+      type="button"
       [class.active]="activeTab === 'memorized'"
       [attr.aria-selected]="activeTab === 'memorized'"
       (click)="activeTab = 'memorized'"
@@ -60,66 +52,8 @@
   </nav>
 
   <div class="workspace" [hidden]="activeTab !== 'roadmap'">
-    <section class="col left" aria-label="Daily plan and tracking">
-      <div class="blueprint-grid">
-        <button
-          type="button"
-          class="task-card"
-          *ngFor="let item of blueprint"
-          [class.done]="isDone(item)"
-          (click)="toggle(item)"
-          [attr.aria-pressed]="isDone(item)"
-        >
-          <div class="task-top">
-            <span class="task-order">{{ item.order }}. {{ item.title }}</span>
-            <span class="duration">{{ item.duration }}</span>
-          </div>
-          <p>{{ taskCopy(item) }}</p>
-          <span class="check" aria-hidden="true">{{ isDone(item) ? '✓' : '' }}</span>
-        </button>
-      </div>
-
-      <div class="track-panel">
-        <div class="settings-grid">
-          <label class="field">
-            <span>Current phase (new surah)</span>
-            <select
-              [ngModel]="progress.currentSurahNumber"
-              (ngModelChange)="onPhaseChange($event)"
-            >
-              <option *ngFor="let surah of phaseOptions" [ngValue]="surah.number">
-                {{ surahLabel(surah) }}
-              </option>
-            </select>
-          </label>
-
-          <label class="field">
-            <span>Ayah reached</span>
-            <div class="ayah-row">
-              <select
-                [ngModel]="progress.currentAyah"
-                (ngModelChange)="onAyahChange($event)"
-              >
-                <option *ngFor="let ayah of ayahOptions" [ngValue]="ayah">
-                  {{ ayah === 0 ? '0' : ayah }}
-                </option>
-              </select>
-              <button
-                type="button"
-                class="btn solid"
-                [disabled]="!canAdvanceSurah"
-                (click)="advanceSurah()"
-              >
-                Done →
-              </button>
-            </div>
-          </label>
-        </div>
-
-        <p class="status" *ngIf="statusMessage" role="status">{{ statusMessage }}</p>
-      </div>
-
-      <div class="listen-panel">
+    <section class="col left" aria-label="Listen and mushaf">
+      <div class="listen-panel listen-panel-solo">
         <div class="listen-head">
           <div>
             <h3>Listen &amp; Mushaf</h3>
@@ -139,6 +73,8 @@
             {{ sequenceButtonLabel }}
           </button>
         </div>
+
+        <p class="status" *ngIf="statusMessage" role="status">{{ statusMessage }}</p>
 
         <div class="listen-controls">
           <label class="reciter-field day-field">
@@ -283,6 +219,13 @@
         </ul>
       </details>
     </section>
+  </div>
+
+  <div
+    class="memorize-workspace"
+    [hidden]="activeTab !== 'memorize'"
+  >
+    <app-memorize></app-memorize>
   </div>
 
   <section

@@ -1,0 +1,142 @@
+<section class="memorize" aria-labelledby="memorize-heading">
+  <div class="memorize-hero">
+    <div>
+      <span class="eyebrow">Hifz companion</span>
+      <h2 id="memorize-heading">Memorize</h2>
+      <p>
+        IntelliJ-style verse sets with auto-repeat — audio from
+        <a href="https://everyayah.com/" target="_blank" rel="noopener noreferrer"
+          >EveryAyah</a
+        >.
+      </p>
+    </div>
+    <div class="memorize-live" *ngIf="isPlaying || currentSetLabel">
+      <strong>{{ currentSetLabel || 'Ready' }}</strong>
+      <span *ngIf="setRepeatTotal"
+        >Repeat {{ setRepeat }}/{{ setRepeatTotal }}</span
+      >
+    </div>
+  </div>
+
+  <div class="memorize-layout">
+    <aside class="memorize-controls" aria-label="Memorize settings">
+      <label class="field">
+        <span>Surah</span>
+        <select [ngModel]="surahNumber" (ngModelChange)="onSurahChange($event)">
+          <option *ngFor="let s of surahs" [ngValue]="s.number">
+            {{ surahLabel(s) }}
+          </option>
+        </select>
+      </label>
+
+      <div class="range-row">
+        <label class="field">
+          <span>From</span>
+          <select [ngModel]="fromAyah" (ngModelChange)="onFromChange($event)">
+            <option *ngFor="let a of ayahOptions" [ngValue]="a">{{ a }}</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>To</span>
+          <select [ngModel]="toAyah" (ngModelChange)="onToChange($event)">
+            <option *ngFor="let a of ayahOptions" [ngValue]="a">{{ a }}</option>
+          </select>
+        </label>
+      </div>
+
+      <label class="field">
+        <span>Mode</span>
+        <select [(ngModel)]="mode">
+          <option *ngFor="let m of modes" [ngValue]="m.id">{{ m.label }}</option>
+        </select>
+      </label>
+      <p class="hint">{{ modeHint }}</p>
+
+      <div class="range-row">
+        <label class="field">
+          <span>Window</span>
+          <select [(ngModel)]="windowSize" [disabled]="mode === 'loop'">
+            <option *ngFor="let n of windowChoices" [ngValue]="n">{{ n }}</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Repeats / set</span>
+          <select [(ngModel)]="repeats">
+            <option *ngFor="let n of repeatChoices" [ngValue]="n">×{{ n }}</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="range-row">
+        <label class="field">
+          <span>Ayah gap</span>
+          <select [(ngModel)]="ayahDelayMs">
+            <option *ngFor="let n of delayChoices" [ngValue]="n">
+              {{ n === 0 ? 'None' : n + ' ms' }}
+            </option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Set gap</span>
+          <select [(ngModel)]="setDelayMs">
+            <option *ngFor="let n of delayChoices" [ngValue]="n">
+              {{ n === 0 ? 'None' : n + ' ms' }}
+            </option>
+          </select>
+        </label>
+      </div>
+
+      <label class="field">
+        <span>Reciter (EveryAyah)</span>
+        <select [(ngModel)]="reciterId">
+          <option *ngFor="let r of reciters" [ngValue]="r.id">{{ r.label }}</option>
+        </select>
+      </label>
+
+      <div class="action-row">
+        <button
+          type="button"
+          class="btn solid play-btn"
+          (click)="togglePlay()"
+        >
+          {{ playButtonLabel }}
+        </button>
+        <button
+          type="button"
+          class="btn ghost"
+          [disabled]="!isPlaying && !isPaused"
+          (click)="stopSession()"
+        >
+          Stop
+        </button>
+      </div>
+
+      <p class="status" *ngIf="statusMessage" role="status">{{ statusMessage }}</p>
+
+      <audio
+        #player
+        class="sr-audio"
+        preload="none"
+        (ended)="onAudioEnded()"
+        (error)="onAudioError()"
+      ></audio>
+    </aside>
+
+    <div class="ayah-panel" aria-label="Ayah text">
+      <p class="text-status" *ngIf="textLoading">Loading Arabic text…</p>
+      <p class="text-status error" *ngIf="!textLoading && textError">{{ textError }}</p>
+
+      <ol class="ayah-list" *ngIf="ayahTexts.length">
+        <li
+          *ngFor="let ayah of ayahTexts; trackBy: trackAyah"
+          [class.in-window]="highlightedAyahs.has(ayah.number)"
+          [class.active]="currentAyah === ayah.number"
+          [class.out-of-range]="ayah.number < fromAyah || ayah.number > toAyah"
+        >
+          <span class="ayah-num">{{ ayah.number }}</span>
+          <span class="ayah-text" dir="rtl" lang="ar">{{ ayah.text || '—' }}</span>
+        </li>
+      </ol>
+    </div>
+  </div>
+</section>
