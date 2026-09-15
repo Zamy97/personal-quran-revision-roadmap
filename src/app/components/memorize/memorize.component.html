@@ -156,6 +156,18 @@
         </select>
       </label>
 
+      <label class="field">
+        <span>Speed</span>
+        <select
+          [ngModel]="playbackRate"
+          (ngModelChange)="onPlaybackRateChange($event)"
+        >
+          <option *ngFor="let r of playbackRateChoices" [ngValue]="r">
+            {{ r }}×
+          </option>
+        </select>
+      </label>
+
       <div class="action-row">
         <button
           type="button"

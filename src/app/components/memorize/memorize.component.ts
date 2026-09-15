@@ -38,6 +38,7 @@ export class MemorizeComponent implements OnDestroy {
   readonly windowChoices = [2, 3, 4, 5, 6, 7, 8, 9, 10];
   readonly delayChoices = [0, 250, 500, 750, 1000, 1500, 2000, 3000];
   readonly pauseChoices = [2000, 3000, 4000, 5000, 6000, 8000, 10000, 15000];
+  readonly playbackRateChoices = [0.75, 1, 1.25, 1.5, 1.75, 2];
 
   surahNumber = 67;
   fromAyah = 1;
@@ -60,6 +61,7 @@ export class MemorizeComponent implements OnDestroy {
   loopRepeats = 3;
 
   ayahDelayMs = 400;
+  playbackRate = 1;
   reciterId = DEFAULT_EVERYAYAH_RECITER_ID;
 
   ayahTexts: AyahText[] = [];
@@ -171,6 +173,18 @@ export class MemorizeComponent implements OnDestroy {
     }
   }
 
+  onPlaybackRateChange(raw: number | string): void {
+    const rate = Number(raw);
+    if (!Number.isFinite(rate) || rate <= 0) {
+      return;
+    }
+    this.playbackRate = rate;
+    const audio = this.playerRef?.nativeElement;
+    if (audio) {
+      audio.playbackRate = rate;
+    }
+  }
+
   togglePlay(): void {
     if (this.awaitingContinue) {
       this.continueAfterPause();
@@ -247,6 +261,7 @@ export class MemorizeComponent implements OnDestroy {
     this.isPaused = false;
     const audio = this.playerRef?.nativeElement;
     if (audio?.getAttribute('src') && audio.paused && !audio.ended) {
+      audio.playbackRate = this.playbackRate;
       audio.play().catch(() => this.playCurrentAyah());
       this.statusMessage = 'Resumed.';
       return;
@@ -378,6 +393,7 @@ export class MemorizeComponent implements OnDestroy {
     this.statusMessage = `${kindLabel}: ${this.currentSetLabel} · ${this.setRepeat}/${this.setRepeatTotal} · ayah ${ayah}`;
     audio.src = everyAyahUrl(this.surahNumber, ayah, this.reciterId);
     audio.load();
+    audio.playbackRate = this.playbackRate;
     audio.play().catch(() => {
       this.statusMessage = 'Playback blocked — click Start again.';
       this.stopSession();
