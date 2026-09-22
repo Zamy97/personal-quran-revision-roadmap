@@ -89,7 +89,7 @@
           <label class="reciter-field day-field">
             <span>Day</span>
             <select
-              [ngModel]="selectedManzil.dayIndex"
+              [ngModel]="selectedDayIndex"
               (ngModelChange)="onRevisionDayChange($event)"
             >
               <option *ngFor="let day of manzilLoop" [ngValue]="day.dayIndex">
@@ -197,15 +197,15 @@
           </thead>
           <tbody>
             <tr
-              *ngFor="let day of manzilLoop"
+              *ngFor="let day of manzilLoop; trackBy: trackManzilDay"
               [class.is-today]="day.dayIndex === todayManzil.dayIndex"
-              [class.is-selected]="day.dayIndex === selectedManzil.dayIndex"
-              (click)="selectRevisionDay(day)"
-              (keydown.enter)="selectRevisionDay(day)"
-              (keydown.space)="$event.preventDefault(); selectRevisionDay(day)"
+              [class.is-selected]="day.dayIndex === selectedDayIndex"
+              (click)="selectRevisionDay(day, $event)"
+              (keydown.enter)="selectRevisionDay(day, $event)"
+              (keydown.space)="$event.preventDefault(); selectRevisionDay(day, $event)"
               tabindex="0"
               role="button"
-              [attr.aria-pressed]="day.dayIndex === selectedManzil.dayIndex"
+              [attr.aria-pressed]="day.dayIndex === selectedDayIndex"
               [attr.aria-label]="'Load ' + day.day + ' revision surahs'"
             >
               <td class="day-cell">{{ day.day.slice(0, 3) }}</td>

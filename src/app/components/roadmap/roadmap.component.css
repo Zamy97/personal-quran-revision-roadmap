@@ -1142,7 +1142,9 @@ tbody tr.is-today[role='button']:hover td {
 }
 
 tbody tr.is-selected td {
-  background: color-mix(in srgb, var(--brand-soft) 70%, var(--surface));
+  background: color-mix(in srgb, var(--brand) 22%, var(--surface));
+  outline: 1px solid color-mix(in srgb, var(--brand) 45%, transparent);
+  outline-offset: -1px;
 }
 
 tbody tr.is-selected td:first-child {
@@ -1156,10 +1158,16 @@ tbody tr.is-selected .day-cell {
 
 tbody tr.is-today.is-selected td {
   background: var(--today);
+  outline-color: color-mix(in srgb, var(--accent) 55%, transparent);
 }
 
 tbody tr.is-today.is-selected td:first-child {
   box-shadow: inset 4px 0 0 var(--accent);
+}
+
+tbody tr[role='button']:focus-visible td {
+  outline: 2px solid var(--brand);
+  outline-offset: -2px;
 }
 
 .day-cell {

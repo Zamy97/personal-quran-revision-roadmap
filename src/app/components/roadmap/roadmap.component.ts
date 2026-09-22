@@ -67,10 +67,10 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
   /** Calendar weekday’s manzil (always “today”). */
   todayManzil!: ManzilDay;
   /**
-   * Manzil shown in Listen / Play all. Defaults to today; session-only
-   * (reload always lands on the calendar day again).
+   * Which weekday’s surahs are loaded in Listen / Play all.
+   * Stored as dayIndex so it survives manzilLoop rebuilds.
    */
-  selectedManzil!: ManzilDay;
+  selectedDayIndex = new Date().getDay();
   statusMessage = '';
   playingSurah: number | null = null;
   isAudioPlaying = false;
@@ -128,6 +128,9 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
   private calendarDateKey = '';
   private dayWatchTimer?: ReturnType<typeof setInterval>;
   private midnightTimer?: ReturnType<typeof setTimeout>;
+  /** Avoid rebuilding the week on every change-detection pass. */
+  private manzilCacheKey = '';
+  private manzilCache: ManzilDay[] = WEEKLY_MANZIL;
 
   constructor(
     private readonly progressService: ProgressService,
@@ -145,15 +148,25 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
 
   /** Per-user weekly plan when set; otherwise the built-in house plan. */
   get manzilLoop(): ManzilDay[] {
-    // Live-build from the memorized list so partition improvements apply immediately.
-    if (this.progress.memorizedSurahNumbers?.length) {
-      return buildWeeklyManzil(this.progress.memorizedSurahNumbers);
+    const key = this.manzilSourceKey();
+    if (key !== this.manzilCacheKey) {
+      this.manzilCacheKey = key;
+      this.manzilCache = this.buildManzilLoop();
     }
-    const custom = this.progress.weeklyManzil;
-    if (custom && custom.length) {
-      return withDescriptiveDayTitles(custom);
-    }
-    return WEEKLY_MANZIL;
+    return this.manzilCache;
+  }
+
+  /** Manzil shown in Listen / Play all (derived from selectedDayIndex). */
+  get selectedManzil(): ManzilDay {
+    return (
+      this.manzilLoop.find((d) => d.dayIndex === this.selectedDayIndex) ||
+      this.todayManzil ||
+      this.manzilLoop[0]
+    );
+  }
+
+  trackManzilDay(_index: number, day: ManzilDay): number {
+    return day.dayIndex;
   }
 
   get memorizedPortions(): MemorizedPortion[] {
@@ -188,23 +201,14 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
     this.startDayWatcher();
     this.sub = this.progressService.progress$.subscribe((progress) => {
       this.progress = progress;
-      // Refresh day cards when a classmate finishes onboarding / edits curriculum.
+      // Invalidate week cache when curriculum / progress changes.
+      this.manzilCacheKey = '';
       const day =
         this.manzilLoop.find((d) => d.dayIndex === new Date().getDay()) ||
         this.manzilLoop[6];
       this.todayManzil = day;
-      if (
-        !this.selectedManzil ||
-        !this.manzilLoop.some((d) => d.dayIndex === this.selectedManzil.dayIndex)
-      ) {
-        this.selectedManzil = day;
-      } else {
-        const match = this.manzilLoop.find(
-          (d) => d.dayIndex === this.selectedManzil.dayIndex
-        );
-        if (match) {
-          this.selectedManzil = match;
-        }
+      if (!this.manzilLoop.some((d) => d.dayIndex === this.selectedDayIndex)) {
+        this.selectedDayIndex = day.dayIndex;
       }
     });
   }
@@ -362,17 +366,30 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   /** Switch which day’s surahs appear in Listen / Play all (not persisted). */
-  selectRevisionDay(day: ManzilDay): void {
-    if (day.dayIndex === this.selectedManzil?.dayIndex) {
+  selectRevisionDay(day: ManzilDay, event?: Event): void {
+    event?.preventDefault();
+    event?.stopPropagation();
+    if (day.dayIndex === this.selectedDayIndex) {
       return;
     }
     this.stopPlaybackForDayChange();
-    this.selectedManzil = day;
-    this.flash(
-      this.isViewingToday
-        ? `Back to today’s revision (${day.day}).`
-        : `Viewing ${day.day}’s revision.`
-    );
+    this.selectedDayIndex = day.dayIndex;
+
+    const sameSetAsToday =
+      day.dayIndex !== this.todayManzil.dayIndex &&
+      this.sameSurahSet(day.surahNumbers, this.todayManzil.surahNumbers);
+
+    if (this.isViewingToday) {
+      this.flash(`Back to today’s revision (${day.day}).`);
+    } else if (sameSetAsToday) {
+      this.flash(
+        `${day.day} repeats today’s set — same surahs, second pass this week.`
+      );
+    } else {
+      this.flash(
+        `Loaded ${day.day}: ${day.focusTitle} (${day.surahNumbers.length || 0} surahs).`
+      );
+    }
     queueMicrotask(() => this.updateScrollHint());
   }
 
@@ -381,6 +398,43 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
       this.manzilLoop.find((d) => d.dayIndex === Number(dayIndex)) ||
       this.todayManzil;
     this.selectRevisionDay(day);
+  }
+
+  private sameSurahSet(a: number[] = [], b: number[] = []): boolean {
+    if (a.length !== b.length) {
+      return false;
+    }
+    const left = [...a].sort((x, y) => x - y);
+    const right = [...b].sort((x, y) => x - y);
+    return left.every((n, i) => n === right[i]);
+  }
+
+  private manzilSourceKey(): string {
+    const memorized = this.progress.memorizedSurahNumbers;
+    if (memorized?.length) {
+      return `m:${[...memorized].sort((a, b) => a - b).join(',')}`;
+    }
+    const custom = this.progress.weeklyManzil;
+    if (custom?.length) {
+      return `w:${custom
+        .map(
+          (d) =>
+            `${d.dayIndex}:${(d.surahNumbers || []).join(',')}:${d.focusTitle}`
+        )
+        .join('|')}`;
+    }
+    return 'default';
+  }
+
+  private buildManzilLoop(): ManzilDay[] {
+    if (this.progress.memorizedSurahNumbers?.length) {
+      return buildWeeklyManzil(this.progress.memorizedSurahNumbers);
+    }
+    const custom = this.progress.weeklyManzil;
+    if (custom?.length) {
+      return withDescriptiveDayTitles(custom);
+    }
+    return WEEKLY_MANZIL;
   }
 
   private stopPlaybackForDayChange(): void {
@@ -1260,7 +1314,10 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
       this.progressService.refreshForNewDay();
     }
 
-    this.selectedManzil = this.todayManzil;
+    // New calendar day (or first load): land on today. Keep in-session picks otherwise.
+    if (isInitial || rolledOver) {
+      this.selectedDayIndex = this.todayManzil.dayIndex;
+    }
 
     if (rolledOver) {
       this.flash(`New day — now on ${this.todayManzil.day}’s revision.`);
