@@ -54,7 +54,7 @@
 .workspace[hidden],
 .memorize-workspace[hidden],
 .memorized-workspace[hidden] {
-  display: none;
+  display: none !important;
 }
 
 .brand {
@@ -154,11 +154,15 @@
   gap: 0.35rem;
   flex: 0 0 auto;
   padding: 0.25rem;
-  align-self: flex-start;
+  align-self: stretch;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  background: color-mix(in srgb, var(--surface) 96%, transparent);
   box-shadow: var(--shadow-2);
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  isolation: isolate;
 }
 
 .page-tabs button {
@@ -172,6 +176,9 @@
   font-size: 0.88rem;
   font-weight: 700;
   cursor: pointer;
+  touch-action: manipulation;
+  position: relative;
+  z-index: 1;
 }
 
 .page-tabs button:hover {
@@ -1531,6 +1538,9 @@ tbody td strong {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
+    position: sticky;
+    top: 0;
+    z-index: 30;
   }
 
   .page-tabs::-webkit-scrollbar {

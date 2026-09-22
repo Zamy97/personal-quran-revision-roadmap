@@ -168,6 +168,23 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
     this.auth.logout(false);
   }
 
+  setActiveTab(tab: 'roadmap' | 'memorized' | 'memorize'): void {
+    if (this.activeTab === tab) {
+      return;
+    }
+    this.activeTab = tab;
+    // Bring the tab strip back into view on phones after long scrolls.
+    queueMicrotask(() => {
+      try {
+        document
+          .querySelector('.page-tabs')
+          ?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      } catch {
+        /* ignore */
+      }
+    });
+  }
+
   /** Re-open the memorized-surah questionnaire (updates weekly plan after save). */
   editMemorizedList(): void {
     this.progressService.requestCurriculumEdit();

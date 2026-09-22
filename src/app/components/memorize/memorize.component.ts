@@ -88,7 +88,7 @@ export class MemorizeComponent implements OnDestroy {
   windowSize = 5;
   movingWindow = false;
   /** After a set finishes, pause so you can revise it in your head. */
-  sequentialPause = true;
+  sequentialPause = false;
   sequentialPauseMs = 4000;
 
   /** Used only when IntelliJ is off: loop the full from–to range. */
@@ -113,7 +113,7 @@ export class MemorizeComponent implements OnDestroy {
   blockKind: 'new' | 'set' | '' = '';
 
   /** Keep parent mushaf viewer on the ayah currently playing. */
-  followMushaf = true;
+  followMushaf = false;
   /** Hide Arabic text while reciting (Tarteel-style practice). */
   hideTextWhileReciting = false;
 

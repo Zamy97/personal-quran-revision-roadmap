@@ -36,7 +36,7 @@
       type="button"
       [class.active]="activeTab === 'roadmap'"
       [attr.aria-selected]="activeTab === 'roadmap'"
-      (click)="activeTab = 'roadmap'"
+      (click)="setActiveTab('roadmap')"
     >
       Revision Roadmap
     </button>
@@ -44,7 +44,7 @@
       type="button"
       [class.active]="activeTab === 'memorize'"
       [attr.aria-selected]="activeTab === 'memorize'"
-      (click)="activeTab = 'memorize'"
+      (click)="setActiveTab('memorize')"
     >
       Memorize
     </button>
@@ -52,14 +52,14 @@
       type="button"
       [class.active]="activeTab === 'memorized'"
       [attr.aria-selected]="activeTab === 'memorized'"
-      (click)="activeTab = 'memorized'"
+      (click)="setActiveTab('memorized')"
     >
       Memorized
       <span>{{ memorizedPortions.length }}</span>
     </button>
   </nav>
 
-  <div class="workspace" [hidden]="activeTab !== 'roadmap'">
+  <div class="workspace" *ngIf="activeTab === 'roadmap'">
     <section class="col left" aria-label="Listen and mushaf">
       <div class="listen-panel listen-panel-solo">
         <div class="listen-head">
@@ -229,16 +229,13 @@
     </section>
   </div>
 
-  <div
-    class="memorize-workspace"
-    [hidden]="activeTab !== 'memorize'"
-  >
+  <div class="memorize-workspace" *ngIf="activeTab === 'memorize'">
     <app-memorize (openMushaf)="onMemorizeOpenMushaf($event)"></app-memorize>
   </div>
 
   <section
     class="memorized-workspace"
-    [hidden]="activeTab !== 'memorized'"
+    *ngIf="activeTab === 'memorized'"
     aria-labelledby="memorized-heading"
   >
     <div class="memorized-hero">
