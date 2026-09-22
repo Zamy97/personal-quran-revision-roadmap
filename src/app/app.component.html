@@ -1,5 +1,12 @@
-<div class="boot" *ngIf="!auth.ready()" role="status" aria-live="polite">
-  <p>Getting things ready…</p>
+<div class="boot" *ngIf="!auth.ready()" role="status" aria-live="polite" aria-busy="true">
+  <div class="boot-card">
+    <div class="auth-loader" aria-hidden="true">
+      <span class="auth-loader-ring"></span>
+      <span class="auth-loader-dot"></span>
+    </div>
+    <p class="boot-title">Revision Roadmap</p>
+    <p class="boot-sub">Getting things ready…</p>
+  </div>
 </div>
 
 <app-auth-gate *ngIf="auth.ready() && !auth.unlocked()"></app-auth-gate>

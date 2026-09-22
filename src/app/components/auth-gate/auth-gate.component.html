@@ -126,4 +126,29 @@
       }}
     </button>
   </form>
+
+  <div
+    class="gate-overlay"
+    *ngIf="auth.submitting()"
+    role="status"
+    aria-live="polite"
+    aria-busy="true"
+  >
+    <div class="gate-overlay-card">
+      <div class="auth-loader" aria-hidden="true">
+        <span class="auth-loader-ring"></span>
+        <span class="auth-loader-dot"></span>
+      </div>
+      <p class="overlay-title">
+        {{ mode() === 'login' ? 'Signing you in' : 'Creating your account' }}
+      </p>
+      <p class="overlay-sub" [class.slow]="showSlowHint()">
+        {{
+          showSlowHint()
+            ? 'Waking the server — this can take a few seconds…'
+            : 'Talking to the server…'
+        }}
+      </p>
+    </div>
+  </div>
 </div>
