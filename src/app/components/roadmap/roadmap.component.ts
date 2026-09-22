@@ -32,6 +32,7 @@ import {
 import { Surah, formatSurahName, getSurah, surahLabel } from '../../data/surahs';
 import { MemorizationProgress, todayKey } from '../../models/progress.model';
 import { ProgressService } from '../../services/progress.service';
+import { AuthService } from '../../services/auth.service';
 import {
   PDFDocumentProxy,
   RenderTask,
@@ -120,10 +121,22 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
   private dayWatchTimer?: ReturnType<typeof setInterval>;
   private midnightTimer?: ReturnType<typeof setTimeout>;
 
-  constructor(private readonly progressService: ProgressService) {
+  constructor(
+    private readonly progressService: ProgressService,
+    private readonly auth: AuthService
+  ) {
     this.progress = this.progressService.snapshot;
     this.darkMode = this.readStoredTheme();
     this.applyTheme(this.darkMode);
+  }
+
+  get authUserLabel(): string {
+    const user = this.auth.user();
+    return user ? `Signed in as ${user.displayName}` : 'Sign out';
+  }
+
+  signOut(): void {
+    this.auth.logout(false);
   }
 
   ngOnInit(): void {

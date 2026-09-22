@@ -1,5 +1,8 @@
-import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
+import { Injectable, inject } from '@angular/core';
+import { BehaviorSubject, Observable, of } from 'rxjs';
+import { catchError, map, tap } from 'rxjs/operators';
+import { environment } from '../../environments/environment';
 import { DEFAULT_SURAH_NUMBER } from '../data/revision-plan';
 import { formatSurahName, getSurah, SURAHS } from '../data/surahs';
 import {
@@ -11,17 +14,72 @@ import {
 
 const STORAGE_KEY = 'quran-revision-progress-v3';
 const LEGACY_KEYS = ['quran-revision-progress-v2', 'quran-revision-progress-v1'];
+const PROGRESS_URL = `${environment.apiBaseUrl.replace(/\/$/, '')}/api/progress`;
 
 @Injectable({ providedIn: 'root' })
 export class ProgressService {
+  private readonly http = inject(HttpClient);
   private readonly progressSubject = new BehaviorSubject<MemorizationProgress>(
-    this.load()
+    this.createDefault()
   );
+  private syncEnabled = false;
+  private saveTimer?: ReturnType<typeof setTimeout>;
 
   readonly progress$ = this.progressSubject.asObservable();
 
   get snapshot(): MemorizationProgress {
     return this.progressSubject.value;
+  }
+
+  /**
+   * Peek at any leftover browser progress (for founding-user signup claim).
+   * Does not change the in-memory subject.
+   */
+  peekLocalProgress(): MemorizationProgress | null {
+    try {
+      let raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) {
+        for (const key of LEGACY_KEYS) {
+          raw = localStorage.getItem(key);
+          if (raw) {
+            break;
+          }
+        }
+      }
+      if (!raw) {
+        return null;
+      }
+      return this.normalize(JSON.parse(raw) as Partial<MemorizationProgress>);
+    } catch {
+      return null;
+    }
+  }
+
+  /** Load from API after login; falls back to local cache if the request fails. */
+  loadFromServer(): Observable<MemorizationProgress> {
+    this.syncEnabled = true;
+    return this.http.get<{ progress: MemorizationProgress }>(PROGRESS_URL).pipe(
+      map((res) => this.normalize(res.progress || {})),
+      tap((progress) => {
+        this.persistLocal(progress);
+        this.progressSubject.next(progress);
+      }),
+      catchError(() => {
+        const local = this.peekLocalProgress() || this.createDefault();
+        this.progressSubject.next(local);
+        return of(local);
+      })
+    );
+  }
+
+  /** Stop syncing and clear in-memory state on logout. */
+  resetForGuest(): void {
+    this.syncEnabled = false;
+    if (this.saveTimer) {
+      clearTimeout(this.saveTimer);
+      this.saveTimer = undefined;
+    }
+    this.progressSubject.next(this.createDefault());
   }
 
   setCurrentSurah(surahNumber: number): void {
@@ -44,7 +102,6 @@ export class ProgressService {
     this.update({ currentAyah: safe, currentLine: safe });
   }
 
-  /** Advances the current phase to the next surah in the mushaf order. */
   advanceToNextSurah(): boolean {
     const current = this.snapshot.currentSurahNumber;
     const next = SURAHS.find((s) => s.number === current + 1);
@@ -89,7 +146,6 @@ export class ProgressService {
     this.update({ memorizedReviews: reviews });
   }
 
-  /** Reset the daily checklist when the calendar date rolls over without a reload. */
   refreshForNewDay(): void {
     if (this.snapshot.daily.date === todayKey()) {
       return;
@@ -108,8 +164,9 @@ export class ProgressService {
         return false;
       }
       const next = this.normalize(parsed);
-      this.persist(next);
+      this.persistLocal(next);
       this.progressSubject.next(next);
+      this.scheduleServerSave(next);
       return true;
     } catch {
       return false;
@@ -132,32 +189,25 @@ export class ProgressService {
       ...partial,
       updatedAt: new Date().toISOString()
     };
-    this.persist(next);
+    this.persistLocal(next);
     this.progressSubject.next(next);
+    this.scheduleServerSave(next);
   }
 
-  private load(): MemorizationProgress {
-    try {
-      let raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) {
-        for (const key of LEGACY_KEYS) {
-          raw = localStorage.getItem(key);
-          if (raw) {
-            break;
-          }
-        }
-      }
-      if (!raw) {
-        return this.createDefault();
-      }
-      const normalized = this.normalize(
-        JSON.parse(raw) as Partial<MemorizationProgress>
-      );
-      this.persist(normalized);
-      return normalized;
-    } catch {
-      return this.createDefault();
+  private scheduleServerSave(progress: MemorizationProgress): void {
+    if (!this.syncEnabled) {
+      return;
     }
+    if (this.saveTimer) {
+      clearTimeout(this.saveTimer);
+    }
+    this.saveTimer = setTimeout(() => {
+      this.http.put(PROGRESS_URL, progress).subscribe({
+        error: () => {
+          /* keep local cache; retry on next edit */
+        }
+      });
+    }, 400);
   }
 
   private normalize(value: Partial<MemorizationProgress>): MemorizationProgress {
@@ -226,7 +276,7 @@ export class ProgressService {
     };
   }
 
-  private persist(value: MemorizationProgress): void {
+  private persistLocal(value: MemorizationProgress): void {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
   }
 }

@@ -1,0 +1,129 @@
+<div class="gate">
+  <form
+    class="gate-card"
+    (submit)="submit($event)"
+    [class.busy]="auth.submitting()"
+  >
+    <span class="eyebrow">Hifz companion</span>
+    <h1>Revision Roadmap</h1>
+    <p class="subtitle">
+      {{
+        mode() === 'login'
+          ? 'Sign in to open your revision plan'
+          : auth.signupInviteRequired()
+            ? 'Create an account with your invite code'
+            : 'Create your account — first signup keeps any progress already on this device'
+      }}
+    </p>
+
+    <div class="tabs" role="tablist">
+      <button
+        type="button"
+        role="tab"
+        [class.active]="mode() === 'login'"
+        (click)="switchMode('login')"
+        [disabled]="auth.submitting()"
+      >
+        Sign in
+      </button>
+      <button
+        type="button"
+        role="tab"
+        [class.active]="mode() === 'signup'"
+        (click)="switchMode('signup')"
+        [disabled]="auth.submitting()"
+      >
+        Sign up
+      </button>
+    </div>
+
+    <label class="field" *ngIf="mode() === 'signup'">
+      <span>Name</span>
+      <input
+        type="text"
+        name="display-name"
+        autocomplete="name"
+        placeholder="Your name"
+        [ngModel]="displayName()"
+        (ngModelChange)="displayName.set($event)"
+        [disabled]="auth.submitting()"
+        maxlength="100"
+      />
+    </label>
+
+    <label
+      class="field"
+      *ngIf="mode() === 'signup' && auth.signupInviteRequired()"
+    >
+      <span>Invite code</span>
+      <input
+        type="password"
+        name="invite-code"
+        autocomplete="off"
+        placeholder="Code from the app owner"
+        [ngModel]="inviteCode()"
+        (ngModelChange)="inviteCode.set($event)"
+        [disabled]="auth.submitting()"
+      />
+    </label>
+
+    <label class="field">
+      <span>Email</span>
+      <input
+        type="email"
+        name="email"
+        autocomplete="email"
+        placeholder="you@example.com"
+        [ngModel]="email()"
+        (ngModelChange)="email.set($event)"
+        [disabled]="auth.submitting()"
+        required
+      />
+    </label>
+
+    <label class="field">
+      <span>Password</span>
+      <input
+        type="password"
+        name="password"
+        [attr.autocomplete]="mode() === 'login' ? 'current-password' : 'new-password'"
+        [placeholder]="mode() === 'signup' ? 'At least 6 characters' : 'Password'"
+        [ngModel]="password()"
+        (ngModelChange)="password.set($event)"
+        [disabled]="auth.submitting()"
+        required
+        minlength="6"
+      />
+    </label>
+
+    <p class="hint" *ngIf="mode() === 'signup' && hasLocalProgress">
+      Existing progress on this browser will be assigned to your account if you
+      are the first to sign up.
+    </p>
+
+    <p class="error" *ngIf="auth.error()" role="alert">{{ auth.error() }}</p>
+
+    <button
+      type="submit"
+      class="submit"
+      [disabled]="
+        auth.submitting() ||
+        !email().trim() ||
+        !password() ||
+        (mode() === 'signup' &&
+          auth.signupInviteRequired() &&
+          !inviteCode().trim())
+      "
+    >
+      {{
+        auth.submitting()
+          ? mode() === 'login'
+            ? 'Signing in…'
+            : 'Creating account…'
+          : mode() === 'login'
+            ? 'Sign in'
+            : 'Create account'
+      }}
+    </button>
+  </form>
+</div>

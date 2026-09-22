@@ -20,6 +20,14 @@
         Restore
         <input type="file" accept="application/json,.json" (change)="onImportFile($event)" hidden />
       </label>
+      <button
+        type="button"
+        class="btn ghost"
+        (click)="signOut()"
+        [attr.title]="authUserLabel"
+      >
+        Sign out
+      </button>
     </div>
   </header>
 

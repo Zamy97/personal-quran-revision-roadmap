@@ -1,1 +1,7 @@
-<router-outlet></router-outlet>
+<div class="boot" *ngIf="!auth.ready()" role="status" aria-live="polite">
+  <p>Getting things ready…</p>
+</div>
+
+<app-auth-gate *ngIf="auth.ready() && !auth.unlocked()"></app-auth-gate>
+
+<router-outlet *ngIf="auth.ready() && auth.unlocked()"></router-outlet>

@@ -1,0 +1,154 @@
+:host {
+  display: block;
+  min-height: 100vh;
+}
+
+.gate {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: var(--page-bg);
+}
+
+.gate-card {
+  width: min(100%, 24rem);
+  padding: 1.75rem 1.5rem 1.5rem;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  box-shadow: var(--shadow-panel);
+  text-align: center;
+  animation: gate-enter 0.35s ease-out both;
+}
+
+.gate-card.busy {
+  opacity: 0.65;
+  pointer-events: none;
+}
+
+@keyframes gate-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.eyebrow {
+  color: var(--accent-deep);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.gate-card h1 {
+  margin: 0.35rem 0 0.4rem;
+  color: var(--brand-deep);
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 4vw, 2rem);
+  line-height: 1.15;
+}
+
+.subtitle {
+  margin: 0 0 1rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+  padding: 0.25rem;
+  border-radius: 10px;
+  background: var(--brand-wash);
+}
+
+.tabs button {
+  border: none;
+  border-radius: 8px;
+  padding: 0.5rem;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.tabs button.active {
+  color: var(--on-brand);
+  background: linear-gradient(135deg, var(--brand-mid), var(--brand));
+}
+
+.field {
+  display: grid;
+  gap: 0.3rem;
+  margin-bottom: 0.75rem;
+  text-align: left;
+}
+
+.field > span {
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.field input {
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0.4rem 0.7rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--brand-deep);
+  font: inherit;
+}
+
+.hint {
+  margin: 0 0 0.75rem;
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+  line-height: 1.4;
+  text-align: left;
+}
+
+.error {
+  margin: 0 0 0.75rem;
+  color: var(--accent-deep);
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+.submit {
+  width: 100%;
+  min-height: 2.6rem;
+  border: none;
+  border-radius: 10px;
+  color: var(--on-brand);
+  background: linear-gradient(180deg, var(--accent-mid), var(--accent));
+  font: inherit;
+  font-size: 0.98rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.submit:hover:not(:disabled) {
+  background: var(--accent-deep);
+}
+
+.submit:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
