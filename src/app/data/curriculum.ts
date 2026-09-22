@@ -207,15 +207,23 @@ function buildRevisionChunks(surahs: number[]): RevisionChunk[] {
   }
   runs.push(current);
 
-  const total = totalWeight(sorted);
-  const maxChunk = Math.max(10, total / 3 + 4);
+  // Weight from run spans (not raw per-surah sums) so short surahs don't inflate the cap.
+  const total = runs.reduce((sum, run) => sum + readingPages(run), 0);
+  const maxChunk = Math.max(10, total / 3 + 2);
   const chunks: RevisionChunk[] = [];
 
   for (const run of runs) {
-    for (const piece of splitHeavyRun(run, maxChunk)) {
+    // Long same-juz ranges (e.g. all of Juz 29) should land on more than one day.
+    const forceSplit =
+      run.length >= 6 &&
+      run.every((n) => juzForSurah(n) === juzForSurah(run[0]));
+    const pieces = forceSplit
+      ? splitHeavyRun(run, Math.min(maxChunk, readingPages(run) / 2 + 1))
+      : splitHeavyRun(run, maxChunk);
+    for (const piece of pieces) {
       chunks.push({
         surahs: piece,
-        weight: totalWeight(piece),
+        weight: readingPages(piece),
         juz: juzForSurah(piece[0])
       });
     }
