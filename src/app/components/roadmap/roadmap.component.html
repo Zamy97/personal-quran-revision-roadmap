@@ -59,6 +59,7 @@
     </button>
   </nav>
 
+  <div class="tab-body">
   <div class="workspace" *ngIf="activeTab === 'roadmap'">
     <section class="col left" aria-label="Listen and mushaf">
       <div class="listen-panel listen-panel-solo">
@@ -328,6 +329,7 @@
       {{ statusMessage }}
     </p>
   </section>
+  </div>
 
   <!-- Inline mushaf overlay (floats over the single-page layout) -->
   <div class="mushaf-overlay" *ngIf="mushafOpen" (click)="closeMushaf()">

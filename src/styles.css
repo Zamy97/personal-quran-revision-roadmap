@@ -118,15 +118,15 @@
 @media (max-width: 980px) {
   html,
   body {
-    height: auto;
-    overflow: auto;
+    height: 100%;
+    overflow: hidden;
   }
 }
 
 @media (max-height: 640px) {
   html,
   body {
-    height: auto;
-    overflow: auto;
+    height: 100%;
+    overflow: hidden;
   }
 }

@@ -1,10 +1,11 @@
 :host {
   display: block;
-  min-height: 100vh;
+  height: 100%;
+  min-height: 100dvh;
 }
 
 .boot {
-  min-height: 100vh;
+  min-height: 100dvh;
   display: grid;
   place-items: center;
   background: var(--page-bg);
