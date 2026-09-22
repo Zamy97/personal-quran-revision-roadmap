@@ -369,6 +369,11 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
   selectRevisionDay(day: ManzilDay, event?: Event): void {
     event?.preventDefault();
     event?.stopPropagation();
+    // Drop focus so the row doesn’t keep a focus ring / “expanded” look after click.
+    const target = event?.currentTarget;
+    if (target instanceof HTMLElement) {
+      target.blur();
+    }
     if (day.dayIndex === this.selectedDayIndex) {
       return;
     }
