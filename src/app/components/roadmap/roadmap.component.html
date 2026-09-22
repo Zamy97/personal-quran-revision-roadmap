@@ -247,9 +247,14 @@
         <h2 id="memorized-heading">Memorized Portions</h2>
         <p>Full surahs, pages, and ayah ranges — grouped by juz.</p>
       </div>
-      <div class="memorized-summary">
-        <strong>{{ memorizedPortions.length }}</strong>
-        <span>portions · {{ memorizedByJuz.length }} juz</span>
+      <div class="memorized-hero-actions">
+        <div class="memorized-summary">
+          <strong>{{ memorizedPortions.length }}</strong>
+          <span>portions · {{ memorizedByJuz.length }} juz</span>
+        </div>
+        <button type="button" class="btn ghost" (click)="editMemorizedList()">
+          Edit list
+        </button>
       </div>
     </div>
 

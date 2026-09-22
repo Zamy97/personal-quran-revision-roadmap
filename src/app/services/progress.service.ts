@@ -173,6 +173,20 @@ export class ProgressService {
     }
   }
 
+  /** Mark onboarding incomplete so the root picker shows again. */
+  requestCurriculumEdit(): void {
+    this.update({ onboardingComplete: false });
+  }
+
+  /** Save memorized surahs + generated weekly plan after onboarding / edits. */
+  saveCurriculum(surahNumbers: number[], weeklyManzil: MemorizationProgress['weeklyManzil']): void {
+    this.update({
+      memorizedSurahNumbers: surahNumbers,
+      weeklyManzil: weeklyManzil ?? [],
+      onboardingComplete: true
+    });
+  }
+
   private ensureTodayDaily(): DailyCompletion {
     const current = this.snapshot;
     if (current.daily.date === todayKey()) {
@@ -260,7 +274,23 @@ export class ProgressService {
         !Array.isArray(value.memorizedReviews)
           ? { ...value.memorizedReviews }
           : {},
-      updatedAt: value.updatedAt || new Date().toISOString()
+      updatedAt: value.updatedAt || new Date().toISOString(),
+      onboardingComplete:
+        typeof value.onboardingComplete === 'boolean'
+          ? value.onboardingComplete
+          : undefined,
+      memorizedSurahNumbers: Array.isArray(value.memorizedSurahNumbers)
+        ? [
+            ...new Set(
+              value.memorizedSurahNumbers
+                .map((n) => Math.floor(Number(n)))
+                .filter((n) => n >= 1 && n <= 114)
+            )
+          ].sort((a, b) => a - b)
+        : undefined,
+      weeklyManzil: Array.isArray(value.weeklyManzil)
+        ? (value.weeklyManzil as MemorizationProgress['weeklyManzil'])
+        : undefined
     };
   }
 
@@ -272,7 +302,10 @@ export class ProgressService {
       currentLine: 0,
       daily: emptyDaily(),
       memorizedReviews: {},
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
+      onboardingComplete: false,
+      memorizedSurahNumbers: [],
+      weeklyManzil: []
     };
   }
 

@@ -1,0 +1,59 @@
+<section class="onboard" aria-labelledby="onboard-heading">
+  <div class="onboard-card">
+    <span class="eyebrow">Welcome</span>
+    <h1 id="onboard-heading">What have you memorized?</h1>
+    <p class="lead">
+      Pick the surahs you already know. We’ll build your weekly revision days and
+      fill the Memorized tab from this list.
+    </p>
+
+    <div class="quick-row">
+      <button type="button" class="chip" (click)="selectJuz30()">Juz 30</button>
+      <button type="button" class="chip" (click)="selectRange(67, 77)">
+        Mulk–Mursalat
+      </button>
+      <button type="button" class="chip" (click)="selectRange(36, 36)">Yasin</button>
+      <button type="button" class="chip ghost" (click)="clearAll()">Clear</button>
+    </div>
+
+    <label class="search">
+      <span class="sr-only">Search surahs</span>
+      <input
+        type="search"
+        placeholder="Search by name or number"
+        [ngModel]="search()"
+        (ngModelChange)="search.set($event)"
+        autocomplete="off"
+      />
+    </label>
+
+    <p class="count" aria-live="polite">
+      {{ selectedCount }} surah{{ selectedCount === 1 ? '' : 's' }} selected
+    </p>
+
+    <div class="surah-grid" role="group" aria-label="Memorized surahs">
+      <button
+        type="button"
+        class="surah-chip"
+        *ngFor="let s of filteredSurahs"
+        [class.on]="isSelected(s.number)"
+        (click)="toggle(s.number)"
+        [attr.aria-pressed]="isSelected(s.number)"
+      >
+        <span class="num">{{ s.number }}</span>
+        <span class="name">{{ s.name }}</span>
+      </button>
+    </div>
+
+    <p class="error" *ngIf="error()" role="alert">{{ error() }}</p>
+
+    <button
+      type="button"
+      class="submit"
+      (click)="submit()"
+      [disabled]="saving() || selectedCount === 0"
+    >
+      {{ saving() ? 'Saving…' : 'Build my weekly plan' }}
+    </button>
+  </div>
+</section>

@@ -1,0 +1,192 @@
+:host {
+  display: block;
+  min-height: 100vh;
+}
+
+.onboard {
+  min-height: 100vh;
+  padding: 1rem;
+  background: var(--page-bg);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.onboard-card {
+  width: min(100%, 42rem);
+  margin: 1rem 0 2rem;
+  padding: 1.25rem 1.1rem 1.35rem;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  box-shadow: var(--shadow-panel);
+}
+
+.eyebrow {
+  color: var(--accent-deep);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.onboard-card h1 {
+  margin: 0.35rem 0 0.45rem;
+  color: var(--brand-deep);
+  font-family: var(--font-display);
+  font-size: clamp(1.45rem, 4.5vw, 1.9rem);
+  line-height: 1.2;
+}
+
+.lead {
+  margin: 0 0 1rem;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.quick-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.85rem;
+}
+
+.chip {
+  min-height: 2.1rem;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--brand-soft);
+  color: var(--brand-deep);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.chip.ghost {
+  background: var(--surface);
+}
+
+.search input {
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--brand-deep);
+  font: inherit;
+  font-size: 1rem;
+}
+
+.count {
+  margin: 0.65rem 0 0.5rem;
+  color: var(--brand);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.surah-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  gap: 0.4rem;
+  max-height: min(52vh, 28rem);
+  overflow: auto;
+  padding: 0.15rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.surah-chip {
+  display: grid;
+  grid-template-columns: 2rem 1fr;
+  gap: 0.35rem;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--brand-deep);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.surah-chip.on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.surah-chip .num {
+  font-weight: 800;
+  color: var(--brand);
+  font-size: 0.85rem;
+}
+
+.surah-chip .name {
+  font-size: 0.82rem;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.error {
+  margin: 0.75rem 0 0;
+  color: var(--accent-deep);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.submit {
+  width: 100%;
+  margin-top: 1rem;
+  min-height: 2.85rem;
+  border: none;
+  border-radius: 12px;
+  color: var(--on-brand);
+  background: linear-gradient(180deg, var(--accent-mid), var(--accent));
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.submit:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+@media (max-width: 560px) {
+  .onboard {
+    padding: 0.65rem;
+  }
+
+  .onboard-card {
+    margin: 0.35rem 0 1.25rem;
+    padding: 1rem 0.85rem 1.15rem;
+  }
+
+  .surah-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-height: 48vh;
+  }
+
+  .surah-chip {
+    min-height: 3rem;
+  }
+}

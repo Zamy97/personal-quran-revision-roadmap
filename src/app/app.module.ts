@@ -6,6 +6,7 @@ import { HTTP_INTERCEPTORS, HttpClientModule } from '@angular/common/http';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { AuthGateComponent } from './components/auth-gate/auth-gate.component';
+import { CurriculumOnboardingComponent } from './components/curriculum-onboarding/curriculum-onboarding.component';
 import { RoadmapComponent } from './components/roadmap/roadmap.component';
 import { MemorizeComponent } from './components/memorize/memorize.component';
 import { AuthInterceptor } from './interceptors/auth.interceptor';
@@ -14,6 +15,7 @@ import { AuthInterceptor } from './interceptors/auth.interceptor';
   declarations: [
     AppComponent,
     AuthGateComponent,
+    CurriculumOnboardingComponent,
     RoadmapComponent,
     MemorizeComponent
   ],

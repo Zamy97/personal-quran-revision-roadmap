@@ -14,6 +14,11 @@ import {
   WEEKLY_MANZIL
 } from '../../data/revision-plan';
 import {
+  buildMemorizedPortions,
+  buildWeeklyManzil,
+  groupMemorizedByJuz
+} from '../../data/curriculum';
+import {
   documentPageForSurah,
   mushafPdfUrlForSurah,
   mushafViewerUrl as buildMushafViewerUrl,
@@ -22,6 +27,7 @@ import {
 import {
   MEMORIZED_BY_JUZ,
   MEMORIZED_PORTIONS,
+  MemorizedJuzGroup,
   MemorizedPortion
 } from '../../data/memorized-portions';
 import {
@@ -49,11 +55,8 @@ configurePdfWorker();
 })
 export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly reminders = RETENTION_REMINDERS;
-  readonly manzilLoop: ManzilDay[] = WEEKLY_MANZIL;
   readonly surahLabel = surahLabel;
   readonly reciters = RECITERS;
-  readonly memorizedPortions = MEMORIZED_PORTIONS;
-  readonly memorizedByJuz = MEMORIZED_BY_JUZ;
 
   progress: MemorizationProgress;
   activeTab: 'roadmap' | 'memorized' | 'memorize' = 'roadmap';
@@ -135,8 +138,39 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
     return user ? `Signed in as ${user.displayName}` : 'Sign out';
   }
 
+  /** Per-user weekly plan when set; otherwise the built-in house plan. */
+  get manzilLoop(): ManzilDay[] {
+    const custom = this.progress.weeklyManzil;
+    if (custom && custom.length) {
+      return custom;
+    }
+    if (this.progress.memorizedSurahNumbers?.length) {
+      return buildWeeklyManzil(this.progress.memorizedSurahNumbers);
+    }
+    return WEEKLY_MANZIL;
+  }
+
+  get memorizedPortions(): MemorizedPortion[] {
+    if (this.progress.memorizedSurahNumbers?.length) {
+      return buildMemorizedPortions(this.progress.memorizedSurahNumbers);
+    }
+    return MEMORIZED_PORTIONS;
+  }
+
+  get memorizedByJuz(): MemorizedJuzGroup[] {
+    if (this.progress.memorizedSurahNumbers?.length) {
+      return groupMemorizedByJuz(this.memorizedPortions);
+    }
+    return MEMORIZED_BY_JUZ;
+  }
+
   signOut(): void {
     this.auth.logout(false);
+  }
+
+  /** Re-open the memorized-surah questionnaire (updates weekly plan after save). */
+  editMemorizedList(): void {
+    this.progressService.requestCurriculumEdit();
   }
 
   ngOnInit(): void {
@@ -144,6 +178,24 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
     this.startDayWatcher();
     this.sub = this.progressService.progress$.subscribe((progress) => {
       this.progress = progress;
+      // Refresh day cards when a classmate finishes onboarding / edits curriculum.
+      const day =
+        this.manzilLoop.find((d) => d.dayIndex === new Date().getDay()) ||
+        this.manzilLoop[6];
+      this.todayManzil = day;
+      if (
+        !this.selectedManzil ||
+        !this.manzilLoop.some((d) => d.dayIndex === this.selectedManzil.dayIndex)
+      ) {
+        this.selectedManzil = day;
+      } else {
+        const match = this.manzilLoop.find(
+          (d) => d.dayIndex === this.selectedManzil.dayIndex
+        );
+        if (match) {
+          this.selectedManzil = match;
+        }
+      }
     });
   }
 

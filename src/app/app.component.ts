@@ -1,5 +1,9 @@
-import { Component, OnDestroy, effect, inject } from '@angular/core';
+import { Component, OnDestroy, effect, inject, signal } from '@angular/core';
 import { Subscription } from 'rxjs';
+import {
+  MemorizationProgress,
+  needsCurriculumOnboarding
+} from './models/progress.model';
 import { AuthService } from './services/auth.service';
 import { ProgressService } from './services/progress.service';
 
@@ -10,23 +14,42 @@ import { ProgressService } from './services/progress.service';
 })
 export class AppComponent implements OnDestroy {
   readonly auth = inject(AuthService);
-  private readonly progress = inject(ProgressService);
+  private readonly progressService = inject(ProgressService);
   private loadSub?: Subscription;
+  private progressSub?: Subscription;
+
+  progress = signal<MemorizationProgress | null>(null);
+  showOnboarding = signal(false);
 
   constructor() {
     this.auth.start();
     effect(() => {
       const unlocked = this.auth.unlocked();
       this.loadSub?.unsubscribe();
+      this.progressSub?.unsubscribe();
       if (unlocked) {
-        this.loadSub = this.progress.loadFromServer().subscribe();
+        this.loadSub = this.progressService.loadFromServer().subscribe((p) => {
+          this.progress.set(p);
+          this.showOnboarding.set(needsCurriculumOnboarding(p));
+        });
+        this.progressSub = this.progressService.progress$.subscribe((p) => {
+          this.progress.set(p);
+          this.showOnboarding.set(needsCurriculumOnboarding(p));
+        });
       } else {
-        this.progress.resetForGuest();
+        this.progressService.resetForGuest();
+        this.progress.set(null);
+        this.showOnboarding.set(false);
       }
     });
   }
 
+  onOnboardingDone(): void {
+    this.showOnboarding.set(false);
+  }
+
   ngOnDestroy(): void {
     this.loadSub?.unsubscribe();
+    this.progressSub?.unsubscribe();
   }
 }

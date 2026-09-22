@@ -4,4 +4,11 @@
 
 <app-auth-gate *ngIf="auth.ready() && !auth.unlocked()"></app-auth-gate>
 
-<router-outlet *ngIf="auth.ready() && auth.unlocked()"></router-outlet>
+<app-curriculum-onboarding
+  *ngIf="auth.ready() && auth.unlocked() && showOnboarding()"
+  (completed)="onOnboardingDone()"
+></app-curriculum-onboarding>
+
+<router-outlet
+  *ngIf="auth.ready() && auth.unlocked() && !showOnboarding()"
+></router-outlet>
