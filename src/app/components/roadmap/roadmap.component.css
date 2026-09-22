@@ -1387,6 +1387,19 @@ tbody td strong {
   min-width: 5.5rem;
 }
 
+.mushaf-memorize-hint {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 7px;
+  color: var(--on-brand-muted);
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .mushaf-speed select {
   min-height: 2.15rem;
   padding: 0.25rem 0.45rem;
