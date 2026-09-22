@@ -231,7 +231,10 @@
   </div>
 
   <div class="memorize-workspace" *ngIf="activeTab === 'memorize'">
-    <app-memorize (openMushaf)="onMemorizeOpenMushaf($event)"></app-memorize>
+    <app-memorize
+      (openMushaf)="onMemorizeOpenMushaf($event)"
+      (sessionAudioChange)="onMemorizeSessionAudio($event)"
+    ></app-memorize>
   </div>
 
   <section
@@ -348,6 +351,7 @@
           <button
             type="button"
             class="btn ghost mushaf-audio-btn"
+            *ngIf="showMushafSurahPlay"
             [disabled]="!mushafSurahNumber"
             (click)="toggleMushafAudio()"
             [attr.aria-label]="isAudioPlaying ? 'Pause audio' : 'Play audio'"
@@ -355,6 +359,13 @@
           >
             {{ mushafAudioButtonLabel }}
           </button>
+          <span
+            class="mushaf-memorize-hint"
+            *ngIf="!showMushafSurahPlay"
+            title="Memorize session is playing ayah audio"
+          >
+            Memorize audio
+          </span>
           <label class="mushaf-speed">
             <span class="sr-only">Playback speed</span>
             <select

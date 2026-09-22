@@ -39,6 +39,7 @@ import { Surah, formatSurahName, getSurah, surahLabel } from '../../data/surahs'
 import { MemorizationProgress, todayKey } from '../../models/progress.model';
 import { ProgressService } from '../../services/progress.service';
 import { AuthService } from '../../services/auth.service';
+import { MemorizeComponent } from '../memorize/memorize.component';
 import {
   PDFDocumentProxy,
   RenderTask,
@@ -94,6 +95,8 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
   mushafFollowAudio = true;
   private mushafFollowSuspended = false;
   private lastFollowSyncedPage: number | null = null;
+  /** Mushaf was opened from Memorize — don't start a second (surah) player. */
+  mushafDrivenByMemorize = false;
 
   /** Scroll hint for the surah list */
   showScrollHint = false;
@@ -116,6 +119,7 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('mushafCanvas') mushafCanvasRef?: ElementRef<HTMLCanvasElement>;
   @ViewChild('mushafCanvasLeft') mushafCanvasLeftRef?: ElementRef<HTMLCanvasElement>;
   @ViewChild('mushafPageWrap') mushafPageWrapRef?: ElementRef<HTMLDivElement>;
+  @ViewChild(MemorizeComponent) memorizeRef?: MemorizeComponent;
 
   private sub?: Subscription;
   private statusTimer?: ReturnType<typeof setTimeout>;
@@ -494,6 +498,18 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
     return this.isAudioPlaying ? '❚❚ Pause' : '▶ Play';
   }
 
+  /**
+   * When mushaf is open from an active Memorize session, hide surah Play —
+   * Memorize already owns ayah audio.
+   */
+  get showMushafSurahPlay(): boolean {
+    if (!this.mushafDrivenByMemorize) {
+      return true;
+    }
+    const m = this.memorizeRef;
+    return !(m && (m.isPlaying || m.isPaused || m.awaitingContinue));
+  }
+
   /** Play / pause from the mushaf popup without closing it. */
   toggleMushafAudio(): void {
     const audio = this.playerRef?.nativeElement;
@@ -501,6 +517,9 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
     if (!audio || surah == null) {
       return;
     }
+
+    // Never layer surah audio on top of a Memorize session.
+    this.stopMemorizeAudio();
 
     if (this.playingSurah === surah && !audio.paused) {
       audio.pause();
@@ -707,14 +726,19 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
     );
   }
 
-  openMushaf(surahNumber: number, page = 1): void {
+  openMushaf(surahNumber: number, page = 1, fromMemorize = false): void {
+    this.mushafDrivenByMemorize = fromMemorize;
     this.mushafSurahNumber = surahNumber;
     this.mushafPage = this.normalizeMushafPage(page);
     this.mushafError = '';
     this.mushafOpen = true;
     this.lastFollowSyncedPage = null;
     // Reopening the playing surah should resume follow-along.
-    if (this.mushafFollowAudio && this.playingSurah === surahNumber) {
+    if (
+      !fromMemorize &&
+      this.mushafFollowAudio &&
+      this.playingSurah === surahNumber
+    ) {
       this.mushafFollowSuspended = false;
       this.scheduleMushafRender();
       this.onAudioTimeUpdate();
@@ -728,6 +752,7 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
     if (this.mushafOpen && this.mushafSurahNumber === req.surahNumber) {
       const page = this.normalizeMushafPage(req.page);
       if (page === this.mushafPage) {
+        this.mushafDrivenByMemorize = true;
         return;
       }
     }
@@ -737,7 +762,14 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
     }
     // Memorize drives the page — don't fight with revision audio follow.
     this.mushafFollowSuspended = true;
-    this.openMushaf(req.surahNumber, req.page);
+    this.openMushaf(req.surahNumber, req.page, true);
+  }
+
+  /** Memorize ayah audio started — silence revision/mushaf surah player. */
+  onMemorizeSessionAudio(active: boolean): void {
+    if (active) {
+      this.pauseRoadmapAudio();
+    }
   }
 
   openMemorizedPortion(portion: MemorizedPortion): void {
@@ -775,6 +807,7 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
 
   closeMushaf(): void {
     this.mushafOpen = false;
+    this.mushafDrivenByMemorize = false;
     this.mushafRenderToken += 1;
     void this.cancelMushafRenders();
     // Closing while listening pauses auto-follow until the next play.
@@ -1137,6 +1170,8 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
     if (!audio) {
       return;
     }
+    this.stopMemorizeAudio();
+    this.mushafDrivenByMemorize = false;
     audio.src = this.audioUrl(surahNumber);
     audio.playbackRate = this.playbackRate;
     this.playingSurah = surahNumber;
@@ -1149,6 +1184,19 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
       this.isAudioPlaying = false;
       this.flash('Could not play audio — check your connection.');
     });
+  }
+
+  private pauseRoadmapAudio(): void {
+    const audio = this.playerRef?.nativeElement;
+    if (audio && !audio.paused) {
+      audio.pause();
+    }
+    this.isAudioPlaying = false;
+    this.sequenceMode = false;
+  }
+
+  private stopMemorizeAudio(): void {
+    this.memorizeRef?.stopSession();
   }
 
   /** Open (or switch) mushaf to the surah currently playing. */

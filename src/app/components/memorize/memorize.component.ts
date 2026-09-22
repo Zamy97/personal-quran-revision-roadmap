@@ -62,6 +62,8 @@ interface SpeechRecognitionHandle {
 })
 export class MemorizeComponent implements OnDestroy {
   @Output() openMushaf = new EventEmitter<MemorizeMushafRequest>();
+  /** True while a memorize session is actively using audio (incl. paused / sequential wait). */
+  @Output() sessionAudioChange = new EventEmitter<boolean>();
 
   readonly surahs = SURAHS;
   readonly surahLabel = surahLabel;
@@ -299,6 +301,8 @@ export class MemorizeComponent implements OnDestroy {
       audio.removeAttribute('src');
       audio.load();
     }
+    const wasActive =
+      this.isPlaying || this.isPaused || this.awaitingContinue;
     this.isPlaying = false;
     this.isPaused = false;
     this.awaitingContinue = false;
@@ -311,6 +315,9 @@ export class MemorizeComponent implements OnDestroy {
     this.setRepeat = 0;
     this.setRepeatTotal = 0;
     this.blockKind = '';
+    if (wasActive) {
+      this.sessionAudioChange.emit(false);
+    }
   }
 
   skipReciteAyah(): void {
@@ -507,6 +514,7 @@ export class MemorizeComponent implements OnDestroy {
 
   private resumeSession(): void {
     this.isPaused = false;
+    this.sessionAudioChange.emit(true);
     const audio = this.playerRef?.nativeElement;
     if (audio?.getAttribute('src') && audio.paused && !audio.ended) {
       audio.playbackRate = this.playbackRate;
@@ -521,6 +529,7 @@ export class MemorizeComponent implements OnDestroy {
     this.awaitingContinue = false;
     this.isPlaying = true;
     this.isPaused = false;
+    this.sessionAudioChange.emit(true);
     if (this.afterPause === 'replay') {
       this.ayahIndexInSet = 0;
       this.playCurrentAyah();
@@ -545,6 +554,7 @@ export class MemorizeComponent implements OnDestroy {
     this.awaitingContinue = false;
     this.blockIndex = 0;
     this.ayahIndexInSet = 0;
+    this.sessionAudioChange.emit(true);
     this.activateBlock(0);
     this.playCurrentAyah();
   }
@@ -746,6 +756,7 @@ export class MemorizeComponent implements OnDestroy {
     this.currentAyah = 0;
     this.setQueue = [];
     this.blockKind = '';
+    this.sessionAudioChange.emit(false);
   }
 
   private loadSurahText(surahNumber: number): void {
