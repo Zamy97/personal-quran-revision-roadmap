@@ -145,13 +145,13 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
 
   /** Per-user weekly plan when set; otherwise the built-in house plan. */
   get manzilLoop(): ManzilDay[] {
-    const custom = this.progress.weeklyManzil;
-    if (custom && custom.length) {
-      // Rewrite leftover "Loop A/B/C" labels into descriptive surah/juz titles.
-      return withDescriptiveDayTitles(custom);
-    }
+    // Live-build from the memorized list so partition improvements apply immediately.
     if (this.progress.memorizedSurahNumbers?.length) {
       return buildWeeklyManzil(this.progress.memorizedSurahNumbers);
+    }
+    const custom = this.progress.weeklyManzil;
+    if (custom && custom.length) {
+      return withDescriptiveDayTitles(custom);
     }
     return WEEKLY_MANZIL;
   }
