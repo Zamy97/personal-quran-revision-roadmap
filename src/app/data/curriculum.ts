@@ -17,14 +17,16 @@ const DAY_NAMES = [
   'Saturday'
 ] as const;
 
+const JUZ_30_SURAHS = Array.from({ length: 37 }, (_, i) => 78 + i);
+
 /**
  * Split memorized surahs into a mirrored 3-day loop (Mon=Thu, Tue=Fri, Wed=Sat)
  * balanced by mushaf page volume — same structure as the hand-built weekly plan.
  */
 export function buildWeeklyManzil(surahNumbers: number[]): ManzilDay[] {
   const unique = normalizeSurahList(surahNumbers);
-  const [loopA, loopB, loopC] = partitionIntoThree(unique);
-  const loops = [makeLoop(loopA, 'A'), makeLoop(loopB, 'B'), makeLoop(loopC, 'C')];
+  const [bucketA, bucketB, bucketC] = partitionIntoThree(unique);
+  const loops = [bucketA, bucketB, bucketC].map((nums) => describeDayFocus(nums));
 
   const week: ManzilDay[] = [
     { day: 'Monday', dayIndex: 1, ...loops[0] },
@@ -43,6 +45,22 @@ export function buildWeeklyManzil(surahNumbers: number[]): ManzilDay[] {
     }
   ];
   return week;
+}
+
+/**
+ * Refresh auto-generated "Loop A/B/C" titles on saved plans so the UI matches
+ * the descriptive house style (surah / juz names).
+ */
+export function withDescriptiveDayTitles(days: ManzilDay[]): ManzilDay[] {
+  return days.map((day) => {
+    if (day.dayIndex === 0) {
+      return day;
+    }
+    if (!isAutoLoopTitle(day.focusTitle)) {
+      return day;
+    }
+    return { ...day, ...describeDayFocus(day.surahNumbers || []) };
+  });
 }
 
 export function buildMemorizedPortions(
@@ -122,33 +140,120 @@ function surahWeight(surahNumber: number): number {
   return Math.max(1, pageCountForSurah(surahNumber));
 }
 
-function makeLoop(
-  surahNumbers: number[],
-  label: string
+/** Content-based titles like the hand-built house plan (no Loop A/B/C). */
+export function describeDayFocus(
+  surahNumbers: number[]
 ): Omit<ManzilDay, 'day' | 'dayIndex'> {
-  if (!surahNumbers.length) {
+  const sorted = normalizeSurahList(surahNumbers);
+  if (!sorted.length) {
     return {
-      focusTitle: `Loop ${label} (empty)`,
+      focusTitle: 'Open day',
       focusDetail: 'Add more memorized surahs to fill this day',
       estimatedVolume: '—',
       surahNumbers: []
     };
   }
-  const names = surahNumbers.map((n) => getSurah(n)?.name || String(n));
-  const pages = surahNumbers.reduce((sum, n) => sum + surahWeight(n), 0);
-  const detail =
+
+  const pages = sorted.reduce((sum, n) => sum + surahWeight(n), 0);
+  const volume = `~${pages} page${pages === 1 ? '' : 's'}`;
+  const names = sorted.map((n) => getSurah(n)?.name || String(n));
+  const nameDetail =
     names.length <= 6
       ? names.join(', ')
       : `${names.slice(0, 5).join(', ')} + ${names.length - 5} more`;
+
+  if (sorted.length === 1) {
+    return {
+      focusTitle: formatSurahName(sorted[0]),
+      focusDetail: nameDetail,
+      estimatedVolume: volume,
+      surahNumbers: sorted
+    };
+  }
+
+  const allJuz30 = sorted.every((n) => n >= 78 && n <= 114);
+  const completeJuz30 =
+    allJuz30 && JUZ_30_SURAHS.every((n) => sorted.includes(n));
+  if (completeJuz30) {
+    return {
+      focusTitle: 'Juz 30 (Complete)',
+      focusDetail: 'Recite the whole Juz (split: half morning / half evening)',
+      estimatedVolume: volume,
+      surahNumbers: sorted
+    };
+  }
+  if (allJuz30) {
+    return {
+      focusTitle: `Juz 30 · ${sorted.length} surahs`,
+      focusDetail: nameDetail,
+      estimatedVolume: volume,
+      surahNumbers: sorted
+    };
+  }
+
+  const byJuz = new Map<number, number[]>();
+  for (const n of sorted) {
+    const juz = juzForSurah(n);
+    const list = byJuz.get(juz) ?? [];
+    list.push(n);
+    byJuz.set(juz, list);
+  }
+  const juzEntries = [...byJuz.entries()].sort((a, b) => a[0] - b[0]);
+
+  if (juzEntries.length === 1) {
+    const [juz, list] = juzEntries[0];
+    return {
+      focusTitle: `Juz ${juz} · ${list.length} surahs`,
+      focusDetail: nameDetail,
+      estimatedVolume: volume,
+      surahNumbers: sorted
+    };
+  }
+
+  // Mixed buckets: name lone surahs, label denser juz groups — e.g. "Surah Yasin & Juz 29"
+  const namedLeads: string[] = [];
+  const juzChunks: string[] = [];
+  for (const [juz, list] of juzEntries) {
+    if (list.length === 1 && juz !== 30) {
+      namedLeads.push(formatSurahName(list[0]));
+    } else if (juz === 30) {
+      juzChunks.push(
+        list.length >= 30 ? 'Juz 30' : `Juz 30 (${list.length} surahs)`
+      );
+    } else if (list.length >= 3) {
+      juzChunks.push(`Juz ${juz}`);
+    } else {
+      namedLeads.push(...list.map((n) => formatSurahName(n)));
+    }
+  }
+
+  const parts = [...namedLeads, ...juzChunks];
+  let focusTitle: string;
+  if (parts.length === 0) {
+    focusTitle = `${sorted.length} surahs`;
+  } else if (parts.length === 1) {
+    focusTitle = parts[0];
+  } else if (parts.length === 2) {
+    focusTitle = `${parts[0]} & ${parts[1]}`;
+  } else if (parts.length === 3) {
+    focusTitle = `${parts[0]}, ${parts[1]} & ${parts[2]}`;
+  } else {
+    focusTitle = `${parts[0]}, ${parts[1]} & more`;
+  }
+
   return {
-    focusTitle:
-      surahNumbers.length === 1
-        ? formatSurahName(surahNumbers[0])
-        : `Loop ${label} · ${surahNumbers.length} surahs`,
-    focusDetail: detail,
-    estimatedVolume: `~${pages} page${pages === 1 ? '' : 's'}`,
-    surahNumbers
+    focusTitle,
+    focusDetail: nameDetail,
+    estimatedVolume: volume,
+    surahNumbers: sorted
   };
+}
+
+function isAutoLoopTitle(title: string | undefined): boolean {
+  if (!title) {
+    return true;
+  }
+  return /^Loop\s+[ABC]\b/i.test(title.trim());
 }
 
 /** @deprecated keep DAY_NAMES referenced for clarity if needed later */

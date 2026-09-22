@@ -1,4 +1,11 @@
-import { Component, EventEmitter, Output, inject, signal } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  EventEmitter,
+  Output,
+  inject,
+  signal
+} from '@angular/core';
 import { SURAHS, surahLabel } from '../../data/surahs';
 import {
   buildMemorizedPortions,
@@ -7,6 +14,13 @@ import {
 } from '../../data/curriculum';
 import { CORE_MANZIL_SURAH_NUMBERS } from '../../data/revision-plan';
 import { ProgressService } from '../../services/progress.service';
+
+const PREPARE_STEPS = [
+  'Sorting your memorized surahs…',
+  'Balancing revision days…',
+  'Building your weekly plan…',
+  'Opening your roadmap…'
+] as const;
 
 @Component({
   selector: 'app-curriculum-onboarding',
@@ -17,6 +31,7 @@ export class CurriculumOnboardingComponent {
   @Output() completed = new EventEmitter<void>();
 
   private readonly progress = inject(ProgressService);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly surahs = SURAHS;
   readonly surahLabel = surahLabel;
@@ -25,7 +40,11 @@ export class CurriculumOnboardingComponent {
   selected = signal<Set<number>>(new Set());
   search = signal('');
   saving = signal(false);
+  preparing = signal(false);
+  prepareMessage = signal<string>(PREPARE_STEPS[0]);
   error = signal('');
+
+  private stepTimers: ReturnType<typeof setTimeout>[] = [];
 
   constructor() {
     const snap = this.progress.snapshot;
@@ -37,6 +56,8 @@ export class CurriculumOnboardingComponent {
     if (existing.length) {
       this.selected.set(new Set(existing));
     }
+
+    this.destroyRef.onDestroy(() => this.clearPrepareTimers());
   }
 
   get filteredSurahs() {
@@ -61,6 +82,9 @@ export class CurriculumOnboardingComponent {
   }
 
   toggle(n: number): void {
+    if (this.preparing()) {
+      return;
+    }
     const next = new Set(this.selected());
     if (next.has(n)) {
       next.delete(n);
@@ -72,6 +96,9 @@ export class CurriculumOnboardingComponent {
   }
 
   selectJuz30(): void {
+    if (this.preparing()) {
+      return;
+    }
     const next = new Set(this.selected());
     for (let n = this.juz30Start; n <= 114; n++) {
       next.add(n);
@@ -80,6 +107,9 @@ export class CurriculumOnboardingComponent {
   }
 
   selectRange(from: number, to: number): void {
+    if (this.preparing()) {
+      return;
+    }
     const next = new Set(this.selected());
     for (let n = from; n <= to; n++) {
       next.add(n);
@@ -88,21 +118,55 @@ export class CurriculumOnboardingComponent {
   }
 
   clearAll(): void {
+    if (this.preparing()) {
+      return;
+    }
     this.selected.set(new Set());
   }
 
   submit(): void {
+    if (this.preparing()) {
+      return;
+    }
     const list = normalizeSurahList([...this.selected()]);
     if (!list.length) {
       this.error.set('Select at least one memorized surah to continue.');
       return;
     }
+
     this.saving.set(true);
+    this.preparing.set(true);
+    this.prepareMessage.set(PREPARE_STEPS[0]);
+    this.error.set('');
+
+    // Run the real work up front so the dashboard is ready when the overlay finishes.
     const weekly = buildWeeklyManzil(list);
     this.progress.saveCurriculum(list, weekly);
-    // Touch memorized portions build so volume is ready for the memorized tab.
     void buildMemorizedPortions(list);
-    this.saving.set(false);
-    this.completed.emit();
+
+    this.clearPrepareTimers();
+    PREPARE_STEPS.forEach((msg, i) => {
+      if (i === 0) {
+        return;
+      }
+      this.stepTimers.push(
+        setTimeout(() => this.prepareMessage.set(msg), i * 900)
+      );
+    });
+
+    this.stepTimers.push(
+      setTimeout(() => {
+        this.saving.set(false);
+        this.preparing.set(false);
+        this.completed.emit();
+      }, PREPARE_STEPS.length * 900)
+    );
+  }
+
+  private clearPrepareTimers(): void {
+    for (const t of this.stepTimers) {
+      clearTimeout(t);
+    }
+    this.stepTimers = [];
   }
 }

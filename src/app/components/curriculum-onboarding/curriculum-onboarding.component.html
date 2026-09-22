@@ -1,5 +1,5 @@
 <section class="onboard" aria-labelledby="onboard-heading">
-  <div class="onboard-card">
+  <div class="onboard-card" [class.busy]="preparing()">
     <span class="eyebrow">Welcome</span>
     <h1 id="onboard-heading">What have you memorized?</h1>
     <p class="lead">
@@ -8,12 +8,38 @@
     </p>
 
     <div class="quick-row">
-      <button type="button" class="chip" (click)="selectJuz30()">Juz 30</button>
-      <button type="button" class="chip" (click)="selectRange(67, 77)">
+      <button
+        type="button"
+        class="chip"
+        (click)="selectJuz30()"
+        [disabled]="preparing()"
+      >
+        Juz 30
+      </button>
+      <button
+        type="button"
+        class="chip"
+        (click)="selectRange(67, 77)"
+        [disabled]="preparing()"
+      >
         Mulk–Mursalat
       </button>
-      <button type="button" class="chip" (click)="selectRange(36, 36)">Yasin</button>
-      <button type="button" class="chip ghost" (click)="clearAll()">Clear</button>
+      <button
+        type="button"
+        class="chip"
+        (click)="selectRange(36, 36)"
+        [disabled]="preparing()"
+      >
+        Yasin
+      </button>
+      <button
+        type="button"
+        class="chip ghost"
+        (click)="clearAll()"
+        [disabled]="preparing()"
+      >
+        Clear
+      </button>
     </div>
 
     <label class="search">
@@ -24,6 +50,7 @@
         [ngModel]="search()"
         (ngModelChange)="search.set($event)"
         autocomplete="off"
+        [disabled]="preparing()"
       />
     </label>
 
@@ -39,6 +66,7 @@
         [class.on]="isSelected(s.number)"
         (click)="toggle(s.number)"
         [attr.aria-pressed]="isSelected(s.number)"
+        [disabled]="preparing()"
       >
         <span class="num">{{ s.number }}</span>
         <span class="name">{{ s.name }}</span>
@@ -51,9 +79,26 @@
       type="button"
       class="submit"
       (click)="submit()"
-      [disabled]="saving() || selectedCount === 0"
+      [disabled]="saving() || preparing() || selectedCount === 0"
     >
-      {{ saving() ? 'Saving…' : 'Build my weekly plan' }}
+      {{ preparing() ? 'Building…' : 'Build my weekly plan' }}
     </button>
+  </div>
+
+  <div
+    class="prepare-overlay"
+    *ngIf="preparing()"
+    role="status"
+    aria-live="polite"
+    aria-busy="true"
+  >
+    <div class="prepare-card">
+      <div class="auth-loader" aria-hidden="true">
+        <span class="auth-loader-ring"></span>
+        <span class="auth-loader-dot"></span>
+      </div>
+      <p class="prepare-title">Setting up your plan</p>
+      <p class="prepare-sub">{{ prepareMessage() }}</p>
+    </div>
   </div>
 </section>

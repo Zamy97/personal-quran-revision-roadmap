@@ -4,6 +4,7 @@
 }
 
 .onboard {
+  position: relative;
   min-height: 100vh;
   padding: 1rem;
   background: var(--page-bg);
@@ -20,6 +21,15 @@
   border-radius: 16px;
   background: color-mix(in srgb, var(--surface) 94%, transparent);
   box-shadow: var(--shadow-panel);
+  transition:
+    filter 0.3s ease,
+    opacity 0.3s ease;
+}
+
+.onboard-card.busy {
+  filter: blur(2px) saturate(0.85);
+  opacity: 0.55;
+  pointer-events: none;
 }
 
 .eyebrow {
@@ -169,6 +179,138 @@
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
   border: 0;
+}
+
+.prepare-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: color-mix(in srgb, var(--brand-deep) 42%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  animation: prepare-fade 0.28s ease both;
+}
+
+.prepare-card {
+  width: min(100%, 18rem);
+  padding: 1.75rem 1.4rem 1.5rem;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: var(--shadow-panel);
+  text-align: center;
+  animation: prepare-enter 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.prepare-title {
+  margin: 1.1rem 0 0;
+  color: var(--brand-deep);
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.prepare-sub {
+  margin: 0.45rem 0 0;
+  min-height: 2.4em;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.4;
+  font-weight: 600;
+  animation: prepare-shimmer 1.8s ease-in-out infinite;
+}
+
+.auth-loader {
+  position: relative;
+  width: 3.4rem;
+  height: 3.4rem;
+  margin: 0 auto;
+}
+
+.auth-loader-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--brand) 20%, transparent);
+  border-top-color: var(--brand);
+  border-right-color: color-mix(in srgb, var(--brand) 55%, transparent);
+  animation: auth-spin 0.85s linear infinite;
+}
+
+.auth-loader-dot {
+  position: absolute;
+  inset: 28%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 35% 30%,
+    var(--accent-mid),
+    var(--accent)
+  );
+  box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 35%, transparent);
+  animation: auth-dot-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes prepare-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes prepare-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes prepare-shimmer {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes auth-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes auth-dot-pulse {
+  0%,
+  100% {
+    transform: scale(0.92);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .prepare-overlay,
+  .prepare-card,
+  .auth-loader-ring,
+  .auth-loader-dot,
+  .prepare-sub {
+    animation: none;
+  }
 }
 
 @media (max-width: 560px) {

@@ -16,7 +16,8 @@ import {
 import {
   buildMemorizedPortions,
   buildWeeklyManzil,
-  groupMemorizedByJuz
+  groupMemorizedByJuz,
+  withDescriptiveDayTitles
 } from '../../data/curriculum';
 import {
   documentPageForSurah,
@@ -146,7 +147,8 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
   get manzilLoop(): ManzilDay[] {
     const custom = this.progress.weeklyManzil;
     if (custom && custom.length) {
-      return custom;
+      // Rewrite leftover "Loop A/B/C" labels into descriptive surah/juz titles.
+      return withDescriptiveDayTitles(custom);
     }
     if (this.progress.memorizedSurahNumbers?.length) {
       return buildWeeklyManzil(this.progress.memorizedSurahNumbers);
