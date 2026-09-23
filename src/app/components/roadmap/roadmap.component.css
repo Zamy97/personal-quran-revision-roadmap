@@ -1645,12 +1645,21 @@ table.manzil-days tbody td strong {
     white-space: nowrap;
   }
 
-  /* Everything flows in the document; the page itself scrolls. */
+  /* Everything flows in the document; the page itself scrolls.
+     No stacking context here so the sticky tab bar always stays on top. */
   .tab-body {
     flex: 1 1 auto;
     min-height: 0;
     height: auto;
     overflow: visible;
+    position: static;
+    z-index: auto;
+  }
+
+  /* Natural flow doesn't need the sticky weekly-table header, and it must not
+     compete with the sticky tab bar. */
+  table.manzil-days thead th {
+    position: static;
   }
 
   .workspace {

@@ -189,6 +189,16 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
 
   setActiveTab(tab: 'roadmap' | 'memorized' | 'memorize'): void {
     this.activeTab = tab;
+    // On phones the page scrolls naturally; after a long list (e.g. Memorized)
+    // reset to the top so the newly shown tab isn't rendered off-screen.
+    queueMicrotask(() => {
+      try {
+        window.scrollTo({ top: 0, left: 0 });
+        document.scrollingElement?.scrollTo(0, 0);
+      } catch {
+        /* no-op */
+      }
+    });
   }
 
   /** Re-open the memorized-surah questionnaire (updates weekly plan after save). */
