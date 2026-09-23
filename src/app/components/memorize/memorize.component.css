@@ -355,7 +355,19 @@
   font-family: "Amiri", "Scheherazade New", "Noto Naskh Arabic", serif;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 980px) {
+  /* Natural document flow on phones: the page scrolls, not the component. */
+  :host {
+    height: auto;
+    min-height: 0;
+  }
+
+  .memorize {
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+
   .memorize-layout {
     grid-template-columns: 1fr;
   }
@@ -370,6 +382,7 @@
   }
 
   .ayah-panel {
-    max-height: 55vh;
+    max-height: none;
+    overflow: visible;
   }
 }

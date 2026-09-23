@@ -1570,19 +1570,22 @@ table.manzil-days tbody td strong {
   }
 }
 
-/* ---------- Responsive (phones: keep shell; only tab-body scrolls) ---------- */
+/* ---------- Responsive (phones: natural document flow, sticky tabs) ---------- */
 @media (max-width: 980px) {
   :host {
-    height: 100dvh;
-    max-height: 100dvh;
-    overflow: hidden;
+    display: block;
+    height: auto;
+    max-height: none;
+    min-height: 100dvh;
+    overflow: visible;
   }
 
   .page {
-    height: 100%;
-    max-height: 100%;
+    height: auto;
+    max-height: none;
+    min-height: 100dvh;
     padding: 0.55rem 0.65rem 0.75rem;
-    overflow: hidden;
+    overflow: visible;
   }
 
   .topbar {
@@ -1620,12 +1623,15 @@ table.manzil-days tbody td strong {
     font-size: 0.88rem;
   }
 
+  /* Tabs stick to the top of the natural page scroll — always reachable,
+     and can't be covered because there is no internal scroll container. */
   .page-tabs {
+    position: sticky;
+    top: 0;
+    z-index: 50;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
-    position: relative;
-    z-index: 5;
     flex-shrink: 0;
   }
 
@@ -1639,27 +1645,26 @@ table.manzil-days tbody td strong {
     white-space: nowrap;
   }
 
-  /* The tab bar stays fixed; each workspace scrolls inside itself so the
-     momentum-scroll layer can never paint over the tabs on iOS. */
+  /* Everything flows in the document; the page itself scrolls. */
   .tab-body {
     flex: 1 1 auto;
     min-height: 0;
-    overflow: hidden;
+    height: auto;
+    overflow: visible;
   }
 
   .workspace {
     grid-template-columns: 1fr;
-    height: 100%;
+    height: auto;
     min-height: 0;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
+    overflow: visible;
   }
 
+  .memorize-workspace,
   .memorized-workspace {
-    height: 100%;
+    height: auto;
     min-height: 0;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
+    overflow: visible;
   }
 
   .memorized-grid {
@@ -1692,6 +1697,12 @@ table.manzil-days tbody td strong {
 
   .surah-list li {
     min-height: 3rem;
+  }
+
+  /* No nested scrollers on phones — everything flows with the page. */
+  .reminders ul {
+    max-height: none;
+    overflow: visible;
   }
 
   /* Weekly table: render as a normal table on phones. The desktop

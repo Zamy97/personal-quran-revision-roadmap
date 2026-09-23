@@ -115,18 +115,26 @@
   }
 }
 
+/* Phones & short screens: use natural document flow (like a normal website)
+   so the whole page scrolls and nothing can lock behind an internal scroller. */
 @media (max-width: 980px) {
   html,
   body {
-    height: 100%;
-    overflow: hidden;
+    height: auto;
+    min-height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 }
 
 @media (max-height: 640px) {
   html,
   body {
-    height: 100%;
-    overflow: hidden;
+    height: auto;
+    min-height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 }
