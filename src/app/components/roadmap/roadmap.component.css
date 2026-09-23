@@ -1693,6 +1693,30 @@ table.manzil-days tbody td strong {
   .surah-list li {
     min-height: 3rem;
   }
+
+  /* Weekly table: render as a normal table on phones. The desktop
+     equal-height flex layout collapses when the column is content-height. */
+  table.manzil-days,
+  table.manzil-days thead,
+  table.manzil-days thead tr,
+  table.manzil-days tbody,
+  table.manzil-days tbody tr {
+    display: revert;
+    height: auto;
+    flex: none;
+    min-height: 0;
+  }
+
+  table.manzil-days {
+    width: 100%;
+    table-layout: fixed;
+  }
+
+  .table-wrap {
+    display: block;
+    flex: 0 0 auto;
+    overflow: visible;
+  }
 }
 
 @media (max-width: 560px) {
