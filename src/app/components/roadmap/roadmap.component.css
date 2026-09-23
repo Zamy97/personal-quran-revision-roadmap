@@ -235,8 +235,13 @@
 }
 
 /* ---------- Memorized collection ---------- */
+/* Scrolls inside itself (like the Memorize tab) so the tab bar is never
+   covered by a momentum-scroll layer on iOS. */
 .memorized-workspace {
-  min-height: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   padding: clamp(1rem, 2.5vw, 2rem);
   border: 1px solid var(--line);
   border-radius: 14px;
@@ -1634,19 +1639,27 @@ table.manzil-days tbody td strong {
     white-space: nowrap;
   }
 
+  /* The tab bar stays fixed; each workspace scrolls inside itself so the
+     momentum-scroll layer can never paint over the tabs on iOS. */
   .tab-body {
     flex: 1 1 auto;
     min-height: 0;
-    overflow: auto;
-    -webkit-overflow-scrolling: touch;
+    overflow: hidden;
   }
 
   .workspace {
     grid-template-columns: 1fr;
+    height: 100%;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .memorized-workspace {
-    overflow: visible;
+    height: 100%;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .memorized-grid {
@@ -1784,6 +1797,15 @@ table.manzil-days tbody td strong {
   .page {
     height: auto;
     min-height: 100dvh;
+  }
+
+  .tab-body,
+  .workspace,
+  .memorize-workspace,
+  .memorized-workspace {
+    height: auto;
+    min-height: 0;
+    overflow: visible;
   }
 
   .col,
