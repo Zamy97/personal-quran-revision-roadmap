@@ -61,6 +61,8 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly reciters = RECITERS;
 
   progress: MemorizationProgress;
+  /** Visible build marker — confirms which bundle the device actually loaded. */
+  readonly buildTag = 'build 2026-09-23c';
   activeTab: 'roadmap' | 'memorized' | 'memorize' = 'roadmap';
   todayLabel = '';
   todayWeekday = '';
@@ -169,18 +171,48 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
     return day.dayIndex;
   }
 
-  get memorizedPortions(): MemorizedPortion[] {
-    if (this.progress.memorizedSurahNumbers?.length) {
-      return buildMemorizedPortions(this.progress.memorizedSurahNumbers);
+  /**
+   * Memorized data is derived once per source change and cached so the getters
+   * return STABLE references. Without this, every change-detection pass rebuilt
+   * fresh arrays, which made *ngFor destroy/recreate the whole Memorized list
+   * (janky and, on phones, tap-eating).
+   */
+  private memorizedKey = '';
+  private memorizedPortionsCache: MemorizedPortion[] = MEMORIZED_PORTIONS;
+  private memorizedByJuzCache: MemorizedJuzGroup[] = MEMORIZED_BY_JUZ;
+
+  private ensureMemorizedCache(): void {
+    const numbers = this.progress.memorizedSurahNumbers;
+    const key = numbers?.length ? numbers.join(',') : '';
+    if (key === this.memorizedKey) {
+      return;
     }
-    return MEMORIZED_PORTIONS;
+    this.memorizedKey = key;
+    if (numbers?.length) {
+      this.memorizedPortionsCache = buildMemorizedPortions(numbers);
+      this.memorizedByJuzCache = groupMemorizedByJuz(this.memorizedPortionsCache);
+    } else {
+      this.memorizedPortionsCache = MEMORIZED_PORTIONS;
+      this.memorizedByJuzCache = MEMORIZED_BY_JUZ;
+    }
+  }
+
+  get memorizedPortions(): MemorizedPortion[] {
+    this.ensureMemorizedCache();
+    return this.memorizedPortionsCache;
   }
 
   get memorizedByJuz(): MemorizedJuzGroup[] {
-    if (this.progress.memorizedSurahNumbers?.length) {
-      return groupMemorizedByJuz(this.memorizedPortions);
-    }
-    return MEMORIZED_BY_JUZ;
+    this.ensureMemorizedCache();
+    return this.memorizedByJuzCache;
+  }
+
+  trackMemorizedGroup(_index: number, group: MemorizedJuzGroup): string {
+    return group.label;
+  }
+
+  trackMemorizedPortion(_index: number, portion: MemorizedPortion): string {
+    return `${portion.surahNumber}:${portion.section}:${portion.title}`;
   }
 
   signOut(): void {

@@ -2,7 +2,7 @@
   <header class="topbar compact">
     <div class="brand">
       <h1>Revision Roadmap</h1>
-      <p>{{ todayLabel }}</p>
+      <p>{{ todayLabel }} · <span class="build-tag">{{ buildTag }}</span></p>
     </div>
 
     <div class="top-actions">
@@ -275,7 +275,10 @@
       </label>
     </div>
 
-    <section class="memorized-juz" *ngFor="let group of memorizedByJuz">
+    <section
+      class="memorized-juz"
+      *ngFor="let group of memorizedByJuz; trackBy: trackMemorizedGroup"
+    >
       <div class="memorized-section-head">
         <div>
           <h3>{{ group.label }}</h3>
@@ -290,7 +293,7 @@
       <div class="memorized-grid">
         <article
           class="memorized-card"
-          *ngFor="let portion of group.portions"
+          *ngFor="let portion of group.portions; trackBy: trackMemorizedPortion"
         >
           <div class="memorized-card-top">
             <span class="portion-type">{{ portion.section }}</span>
