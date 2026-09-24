@@ -7,9 +7,6 @@ import { MemorizationProgress } from '../models/progress.model';
 const AUTH_URL = `${environment.apiBaseUrl.replace(/\/$/, '')}/api/auth`;
 const TOKEN_KEY = 'quran-auth-token';
 const USER_KEY = 'quran-auth-user';
-const EXPIRY_KEY = 'quran-auth-expires-at';
-const IDLE_MS = 30 * 60 * 1000;
-const ACTIVITY_EVENTS = ['pointerdown', 'keydown', 'mousemove'] as const;
 
 export interface AuthUser {
   id: number;
@@ -24,9 +21,7 @@ interface AuthResponse {
   user: AuthUser;
 }
 
-/**
- * Email/password JWT auth (budget/hub pattern). Idle locks after 30 minutes.
- */
+/** Email/password JWT auth. Stays signed in until the user signs out. */
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly http = inject(HttpClient);
@@ -40,9 +35,6 @@ export class AuthService {
   signupInviteRequired = signal(true);
 
   private started = false;
-  private timeoutId: ReturnType<typeof setTimeout> | null = null;
-  private listening = false;
-  private lastBump = 0;
 
   start(): void {
     if (this.started) {
@@ -57,7 +49,7 @@ export class AuthService {
 
     const storedToken = localStorage.getItem(TOKEN_KEY) ?? '';
     const storedUser = this.readStoredUser();
-    if (!storedToken || !storedUser || this.remainingIdleMs() <= 0) {
+    if (!storedToken || !storedUser) {
       this.clearStoredSession();
       this.ready.set(true);
       return;
@@ -71,8 +63,6 @@ export class AuthService {
         localStorage.setItem(USER_KEY, JSON.stringify(me));
         this.unlocked.set(true);
         this.ready.set(true);
-        this.bumpIdle();
-        this.watchActivity();
       },
       error: () => {
         this.logout(false);
@@ -122,18 +112,17 @@ export class AuthService {
 
   logout(showExpiredMessage = false): void {
     const wasUnlocked = this.unlocked();
-    this.unwatchActivity();
-    this.clearTimer();
     this.unlocked.set(false);
     this.token.set('');
     this.user.set(null);
     this.submitting.set(false);
     this.clearStoredSession();
     if (showExpiredMessage && wasUnlocked) {
-      this.error.set('Session expired — sign in again.');
+      this.error.set('Please sign in again.');
     }
   }
 
+  /** Called when the API rejects the stored token. */
   lock(): void {
     this.logout(true);
   }
@@ -147,8 +136,6 @@ export class AuthService {
     this.submitting.set(false);
     this.ready.set(true);
     this.error.set(null);
-    this.bumpIdle();
-    this.watchActivity();
   }
 
   private handleAuthError(
@@ -182,85 +169,9 @@ export class AuthService {
     }
   }
 
-  private remainingIdleMs(): number {
-    const raw = localStorage.getItem(EXPIRY_KEY);
-    if (!raw) {
-      return 0;
-    }
-    const remaining = Number(raw) - Date.now();
-    return Number.isFinite(remaining) ? remaining : 0;
-  }
-
-  private bumpIdle(): void {
-    if (!this.unlocked() || !this.token()) {
-      return;
-    }
-    const now = Date.now();
-    if (now - this.lastBump < 1000) {
-      return;
-    }
-    this.lastBump = now;
-    localStorage.setItem(EXPIRY_KEY, String(now + IDLE_MS));
-    this.armTimer();
-  }
-
-  private armTimer(): void {
-    this.clearTimer();
-    const remaining = this.remainingIdleMs();
-    if (remaining <= 0) {
-      this.logout(true);
-      return;
-    }
-    this.timeoutId = setTimeout(() => this.logout(true), remaining);
-  }
-
-  private clearTimer(): void {
-    if (this.timeoutId != null) {
-      clearTimeout(this.timeoutId);
-      this.timeoutId = null;
-    }
-  }
-
-  private onActivity = (): void => {
-    this.bumpIdle();
-  };
-
-  private onVisibility = (): void => {
-    if (document.visibilityState !== 'visible') {
-      return;
-    }
-    if (this.remainingIdleMs() <= 0) {
-      this.logout(true);
-      return;
-    }
-    this.armTimer();
-  };
-
-  private watchActivity(): void {
-    if (this.listening) {
-      return;
-    }
-    this.listening = true;
-    for (const event of ACTIVITY_EVENTS) {
-      window.addEventListener(event, this.onActivity, { passive: true });
-    }
-    document.addEventListener('visibilitychange', this.onVisibility);
-  }
-
-  private unwatchActivity(): void {
-    if (!this.listening) {
-      return;
-    }
-    this.listening = false;
-    for (const event of ACTIVITY_EVENTS) {
-      window.removeEventListener(event, this.onActivity);
-    }
-    document.removeEventListener('visibilitychange', this.onVisibility);
-  }
-
   private clearStoredSession(): void {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
-    localStorage.removeItem(EXPIRY_KEY);
+    localStorage.removeItem('quran-auth-expires-at');
   }
 }
