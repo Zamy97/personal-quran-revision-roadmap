@@ -62,7 +62,7 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
 
   progress: MemorizationProgress;
   /** Visible build marker — confirms which bundle the device actually loaded. */
-  readonly buildTag = 'build 2026-09-23c';
+  readonly buildTag = 'build 2026-09-23d';
   activeTab: 'roadmap' | 'memorized' | 'memorize' = 'roadmap';
   todayLabel = '';
   todayWeekday = '';

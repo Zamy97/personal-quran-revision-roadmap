@@ -152,6 +152,15 @@
   display: block;
 }
 
+/* Panels stay MOUNTED across tab switches (so audio keeps playing); the
+   inactive ones are hidden. Each panel sets its own display, which would
+   otherwise beat the [hidden] attribute — so force it off here. */
+.workspace[hidden],
+.memorize-workspace[hidden],
+.memorized-workspace[hidden] {
+  display: none !important;
+}
+
 /* ---------- Roadmap workspace: one column on phones, two on desktop ---------- */
 .workspace {
   display: grid;

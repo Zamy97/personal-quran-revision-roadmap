@@ -60,7 +60,7 @@
   </nav>
 
   <div class="tab-body">
-  <div class="workspace" *ngIf="activeTab === 'roadmap'">
+  <div class="workspace" [hidden]="activeTab !== 'roadmap'">
     <section class="col left" aria-label="Listen and mushaf">
       <div class="listen-panel listen-panel-solo">
         <div class="listen-head">
@@ -230,7 +230,7 @@
     </section>
   </div>
 
-  <div class="memorize-workspace" *ngIf="activeTab === 'memorize'">
+  <div class="memorize-workspace" [hidden]="activeTab !== 'memorize'">
     <app-memorize
       (openMushaf)="onMemorizeOpenMushaf($event)"
       (sessionAudioChange)="onMemorizeSessionAudio($event)"
@@ -239,7 +239,7 @@
 
   <section
     class="memorized-workspace"
-    *ngIf="activeTab === 'memorized'"
+    [hidden]="activeTab !== 'memorized'"
     aria-labelledby="memorized-heading"
   >
     <div class="memorized-hero">
