@@ -289,6 +289,13 @@ export class MemorizeComponent implements OnDestroy {
     this.startSession();
   }
 
+  /** Pause the session when another player (revision Listen) takes over audio. */
+  pauseForExternalAudio(): void {
+    if (this.isPlaying && !this.isPaused) {
+      this.pauseSession();
+    }
+  }
+
   stopSession(): void {
     this.sessionToken += 1;
     if (this.delayTimer) {

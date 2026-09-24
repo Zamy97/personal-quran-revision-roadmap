@@ -10,7 +10,6 @@ import {
 import { Subscription } from 'rxjs';
 import {
   ManzilDay,
-  RETENTION_REMINDERS,
   WEEKLY_MANZIL
 } from '../../data/revision-plan';
 import {
@@ -56,13 +55,12 @@ configurePdfWorker();
   styleUrl: './roadmap.component.css'
 })
 export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
-  readonly reminders = RETENTION_REMINDERS;
   readonly surahLabel = surahLabel;
   readonly reciters = RECITERS;
 
   progress: MemorizationProgress;
   /** Visible build marker — confirms which bundle the device actually loaded. */
-  readonly buildTag = 'build 2026-09-23d';
+  readonly buildTag = 'build 2026-09-23e';
   activeTab: 'roadmap' | 'memorized' | 'memorize' = 'roadmap';
   todayLabel = '';
   todayWeekday = '';
@@ -744,6 +742,9 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
 
   onAudioPlay(): void {
     this.isAudioPlaying = true;
+    // Revision Listen just started — pause any running Memorize session so the
+    // two players never overlap.
+    this.memorizeRef?.pauseForExternalAudio();
     if (this.mushafFollowAudio && this.playingSurah != null) {
       this.ensureMushafFollowsSurah(this.playingSurah);
     }

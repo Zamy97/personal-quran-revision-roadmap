@@ -689,51 +689,6 @@ table.manzil-days tbody td strong {
   font-size: 0.88rem;
 }
 
-/* ---------- Reminders ---------- */
-.reminders {
-  border: 1px solid var(--line);
-  border-radius: 11px;
-  background: linear-gradient(180deg, var(--surface), var(--surface-2));
-  font-size: 0.92rem;
-}
-
-.reminders summary {
-  cursor: pointer;
-  padding: 0.6rem 0.8rem;
-  font-weight: 700;
-  font-size: 0.98rem;
-  color: var(--brand-deep);
-  list-style: none;
-}
-
-.reminders summary::-webkit-details-marker {
-  display: none;
-}
-
-.reminders summary::before {
-  content: "▸ ";
-  color: var(--brand-mid);
-}
-
-.reminders[open] summary::before {
-  content: "▾ ";
-}
-
-.reminders ul {
-  margin: 0;
-  padding: 0 0.9rem 0.7rem 1.6rem;
-}
-
-.reminders li {
-  margin-bottom: 0.4rem;
-  color: var(--ink-soft);
-  line-height: 1.45;
-}
-
-.reminders strong {
-  color: var(--brand-deep);
-}
-
 /* ---------- Memorize workspace ---------- */
 .memorize-workspace {
   display: block;

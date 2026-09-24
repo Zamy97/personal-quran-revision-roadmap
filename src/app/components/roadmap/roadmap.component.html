@@ -8,6 +8,14 @@
     <div class="top-actions">
       <button
         type="button"
+        class="btn solid edit-surahs-btn"
+        (click)="editMemorizedList()"
+        title="Add or edit the surahs you've memorized — your daily plan updates automatically"
+      >
+        Edit surahs
+      </button>
+      <button
+        type="button"
         class="btn ghost theme-toggle"
         (click)="toggleTheme()"
         [attr.aria-label]="darkMode ? 'Switch to light mode' : 'Switch to dark mode'"
@@ -219,14 +227,6 @@
         </table>
       </div>
 
-      <details class="reminders">
-        <summary>High-Retention Reminders</summary>
-        <ul>
-          <li *ngFor="let r of reminders">
-            <strong>{{ r.title }}:</strong> {{ r.detail }}
-          </li>
-        </ul>
-      </details>
     </section>
   </div>
 
@@ -254,7 +254,7 @@
           <span>portions · {{ memorizedByJuz.length }} juz</span>
         </div>
         <button type="button" class="btn ghost" (click)="editMemorizedList()">
-          Edit list
+          Add / edit surahs
         </button>
       </div>
     </div>
