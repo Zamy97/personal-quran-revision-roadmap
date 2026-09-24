@@ -44,10 +44,14 @@ export class CurriculumOnboardingComponent {
   prepareMessage = signal<string>(PREPARE_STEPS[0]);
   error = signal('');
 
+  /** True when the user already has a plan and is editing it (vs first-run). */
+  readonly isEditing: boolean;
+
   private stepTimers: ReturnType<typeof setTimeout>[] = [];
 
   constructor() {
     const snap = this.progress.snapshot;
+    this.isEditing = (snap.memorizedSurahNumbers?.length ?? 0) > 0;
     const existing = snap.memorizedSurahNumbers?.length
       ? snap.memorizedSurahNumbers
       : snap.onboardingComplete === false
@@ -58,6 +62,15 @@ export class CurriculumOnboardingComponent {
     }
 
     this.destroyRef.onDestroy(() => this.clearPrepareTimers());
+  }
+
+  /** Close the picker without changes (only offered when already set up). */
+  cancel(): void {
+    if (this.preparing()) {
+      return;
+    }
+    this.progress.cancelCurriculumEdit();
+    this.completed.emit();
   }
 
   get filteredSurahs() {

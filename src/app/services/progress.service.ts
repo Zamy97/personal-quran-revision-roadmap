@@ -178,6 +178,11 @@ export class ProgressService {
     this.update({ onboardingComplete: false });
   }
 
+  /** Close the picker without changing anything (used by Cancel when editing). */
+  cancelCurriculumEdit(): void {
+    this.update({ onboardingComplete: true });
+  }
+
   /** Save memorized surahs + generated weekly plan after onboarding / edits. */
   saveCurriculum(surahNumbers: number[], weeklyManzil: MemorizationProgress['weeklyManzil']): void {
     this.update({

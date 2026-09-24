@@ -170,6 +170,42 @@
   cursor: not-allowed;
 }
 
+.onboard-actions {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+
+.onboard-actions .submit {
+  flex: 1 1 auto;
+  width: auto;
+  margin-top: 0;
+}
+
+.cancel {
+  flex: 0 0 auto;
+  min-height: 2.85rem;
+  padding: 0 1.1rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  color: var(--brand-deep);
+  background: var(--surface);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cancel:hover:not(:disabled) {
+  background: var(--brand-soft);
+  border-color: var(--brand);
+}
+
+.cancel:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
