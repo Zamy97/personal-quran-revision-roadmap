@@ -1,12 +1,16 @@
 <section class="onboard" aria-labelledby="onboard-heading">
   <div class="onboard-card" [class.busy]="preparing()">
-    <span class="eyebrow">{{ isEditing ? 'Update your list' : 'Welcome' }}</span>
+    <span class="eyebrow">{{ isEditing ? 'Add more' : 'Welcome' }}</span>
     <h1 id="onboard-heading">
-      {{ isEditing ? 'Add or edit your memorized surahs' : 'What have you memorized?' }}
+      {{ isEditing ? 'Add memorized surahs' : 'What have you memorized?' }}
     </h1>
-    <p class="lead">
+    <p class="lead" *ngIf="!isEditing">
       Pick the surahs you already know. We’ll build your weekly revision days and
       fill the Memorized tab from this list.
+    </p>
+    <p class="lead" *ngIf="isEditing">
+      Surahs already on your Memorized list stay hidden here. Pick only the new
+      ones — they’ll be added to the list and your weekly plan.
     </p>
 
     <div class="quick-row">
@@ -56,11 +60,14 @@
       />
     </label>
 
-    <p class="count" aria-live="polite">
+    <p class="count" aria-live="polite" *ngIf="!isEditing">
       {{ selectedCount }} surah{{ selectedCount === 1 ? '' : 's' }} selected
     </p>
+    <p class="count" aria-live="polite" *ngIf="isEditing">
+      {{ newCount }} new to add · {{ alreadyCount }} already memorized
+    </p>
 
-    <div class="surah-grid" role="group" aria-label="Memorized surahs">
+    <div class="surah-grid" role="group" aria-label="Surahs to add">
       <button
         type="button"
         class="surah-chip"
@@ -73,6 +80,13 @@
         <span class="num">{{ s.number }}</span>
         <span class="name">{{ s.name }}</span>
       </button>
+      <p class="empty-grid" *ngIf="!filteredSurahs.length">
+        {{
+          alreadyCount >= 114
+            ? 'Every surah is already on your Memorized list.'
+            : 'No matching surahs left to add.'
+        }}
+      </p>
     </div>
 
     <p class="error" *ngIf="error()" role="alert">{{ error() }}</p>
@@ -91,9 +105,13 @@
         type="button"
         class="submit"
         (click)="submit()"
-        [disabled]="saving() || preparing() || selectedCount === 0"
+        [disabled]="
+          saving() ||
+          preparing() ||
+          (isEditing ? newCount === 0 : selectedCount === 0)
+        "
       >
-        {{ preparing() ? 'Building…' : isEditing ? 'Save changes' : 'Build my weekly plan' }}
+        {{ preparing() ? 'Building…' : isEditing ? 'Add to my plan' : 'Build my weekly plan' }}
       </button>
     </div>
   </div>

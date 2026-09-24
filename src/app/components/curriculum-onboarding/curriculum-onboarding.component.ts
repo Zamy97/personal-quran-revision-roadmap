@@ -46,19 +46,25 @@ export class CurriculumOnboardingComponent {
 
   /** True when the user already has a plan and is editing it (vs first-run). */
   readonly isEditing: boolean;
+  /** Surahs already saved as memorized — kept, but hidden from the add grid. */
+  readonly alreadyMemorized: Set<number>;
 
   private stepTimers: ReturnType<typeof setTimeout>[] = [];
 
   constructor() {
     const snap = this.progress.snapshot;
     this.isEditing = (snap.memorizedSurahNumbers?.length ?? 0) > 0;
-    const existing = snap.memorizedSurahNumbers?.length
-      ? snap.memorizedSurahNumbers
-      : snap.onboardingComplete === false
-        ? []
-        : CORE_MANZIL_SURAH_NUMBERS;
-    if (existing.length) {
-      this.selected.set(new Set(existing));
+    this.alreadyMemorized = new Set(
+      this.isEditing ? snap.memorizedSurahNumbers : []
+    );
+
+    if (!this.isEditing) {
+      // First run: pre-select a sensible starting set (unless explicitly blank).
+      const existing =
+        snap.onboardingComplete === false ? [] : CORE_MANZIL_SURAH_NUMBERS;
+      if (existing.length) {
+        this.selected.set(new Set(existing));
+      }
     }
 
     this.destroyRef.onDestroy(() => this.clearPrepareTimers());
@@ -74,11 +80,16 @@ export class CurriculumOnboardingComponent {
   }
 
   get filteredSurahs() {
+    // When editing, hide surahs already saved as memorized — this list is only
+    // for adding new ones.
+    let list = this.alreadyMemorized.size
+      ? this.surahs.filter((s) => !this.alreadyMemorized.has(s.number))
+      : this.surahs;
     const q = this.search().trim().toLowerCase();
     if (!q) {
-      return this.surahs;
+      return list;
     }
-    return this.surahs.filter(
+    return list.filter(
       (s) =>
         String(s.number).includes(q) ||
         s.name.toLowerCase().includes(q) ||
@@ -88,6 +99,15 @@ export class CurriculumOnboardingComponent {
 
   get selectedCount(): number {
     return this.selected().size;
+  }
+
+  /** Surahs newly picked this session (excludes the already-memorized set). */
+  get newCount(): number {
+    return this.selected().size;
+  }
+
+  get alreadyCount(): number {
+    return this.alreadyMemorized.size;
   }
 
   isSelected(n: number): boolean {
@@ -114,7 +134,9 @@ export class CurriculumOnboardingComponent {
     }
     const next = new Set(this.selected());
     for (let n = this.juz30Start; n <= 114; n++) {
-      next.add(n);
+      if (!this.alreadyMemorized.has(n)) {
+        next.add(n);
+      }
     }
     this.selected.set(next);
   }
@@ -125,7 +147,9 @@ export class CurriculumOnboardingComponent {
     }
     const next = new Set(this.selected());
     for (let n = from; n <= to; n++) {
-      next.add(n);
+      if (!this.alreadyMemorized.has(n)) {
+        next.add(n);
+      }
     }
     this.selected.set(next);
   }
@@ -141,7 +165,11 @@ export class CurriculumOnboardingComponent {
     if (this.preparing()) {
       return;
     }
-    const list = normalizeSurahList([...this.selected()]);
+    // Keep everything already memorized and add the new picks on top.
+    const list = normalizeSurahList([
+      ...this.alreadyMemorized,
+      ...this.selected()
+    ]);
     if (!list.length) {
       this.error.set('Select at least one memorized surah to continue.');
       return;

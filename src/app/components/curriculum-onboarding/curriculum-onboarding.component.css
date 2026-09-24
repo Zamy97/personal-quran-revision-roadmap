@@ -144,6 +144,15 @@
   white-space: nowrap;
 }
 
+.empty-grid {
+  grid-column: 1 / -1;
+  margin: 0.6rem 0.2rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: center;
+}
+
 .error {
   margin: 0.75rem 0 0;
   color: var(--accent-deep);
