@@ -35,7 +35,7 @@ import {
   RECITERS,
   getReciter
 } from '../../data/reciters';
-import { Surah, formatSurahName, getSurah, surahLabel } from '../../data/surahs';
+import { SURAHS, Surah, formatSurahName, getSurah, surahLabel } from '../../data/surahs';
 import { MemorizationProgress, todayKey } from '../../models/progress.model';
 import { ProgressService } from '../../services/progress.service';
 import { AuthService } from '../../services/auth.service';
@@ -78,6 +78,11 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
   /** Current play number within a surah during Play all (1-based). */
   sequenceRep = 1;
   selectedReciterId = DEFAULT_RECITER_ID;
+  /** Listen to the selected day's set, or a custom surah range (e.g. 67–72). */
+  listenMode: 'day' | 'range' = 'day';
+  rangeFrom = 67;
+  rangeTo = 72;
+  readonly allSurahs = SURAHS;
   /** Choices for how many times a surah plays in Play all. */
   readonly repeatChoices = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
   /** Playback speed options for the audio element / mushaf controls. */
@@ -430,13 +435,86 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
     this.loadedPdfUrl = null;
   }
 
-  /** Surahs for the selected manzil day (Listen / Play all / Mushaf list). */
+  /** Surahs for the selected manzil day. */
   get todaySurahs(): Surah[] {
     const numbers = this.selectedManzil?.surahNumbers ?? [];
     return numbers
       .map((n) => getSurah(n))
       .filter((s): s is Surah => !!s)
       .sort((a, b) => a.number - b.number);
+  }
+
+  /** What Listen / Play all actually uses — day's set or a custom range. */
+  get listenSurahs(): Surah[] {
+    if (this.listenMode !== 'range') {
+      return this.todaySurahs;
+    }
+    const from = Math.min(this.rangeFrom, this.rangeTo);
+    const to = Math.max(this.rangeFrom, this.rangeTo);
+    return this.allSurahs.filter((s) => s.number >= from && s.number <= to);
+  }
+
+  get listenListTitle(): string {
+    if (this.listenMode !== 'range') {
+      return `Surahs for ${this.selectedManzil.day}`;
+    }
+    const from = Math.min(this.rangeFrom, this.rangeTo);
+    const to = Math.max(this.rangeFrom, this.rangeTo);
+    if (from === to) {
+      return formatSurahName(from);
+    }
+    return `Surahs ${from}–${to}`;
+  }
+
+  get listenHeadHint(): string {
+    const order = 'Quran order · × applies to Listen & Play all';
+    if (this.listenMode === 'range') {
+      const from = Math.min(this.rangeFrom, this.rangeTo);
+      const to = Math.max(this.rangeFrom, this.rangeTo);
+      return from === to
+        ? `Custom · ${formatSurahName(from)} · ${order}`
+        : `Custom range · ${from}–${to} · ${order}`;
+    }
+    return `${this.selectedManzil.day}${this.isViewingToday ? ' (today)' : ''} · ${order}`;
+  }
+
+  setListenMode(mode: 'day' | 'range'): void {
+    if (this.listenMode === mode) {
+      return;
+    }
+    this.stopPlaybackForDayChange();
+    this.listenMode = mode;
+    this.todayListOpen = mode === 'range' || this.todaySurahs.length > 0;
+    if (mode === 'range') {
+      this.normalizeRange();
+      this.flash(`Listening to ${this.listenListTitle}.`);
+    } else {
+      this.flash(`Back to ${this.selectedManzil.day}’s revision set.`);
+    }
+    queueMicrotask(() => this.updateScrollHint());
+  }
+
+  onRangeBoundChange(which: 'from' | 'to', raw: number | string): void {
+    const n = Math.min(114, Math.max(1, Number(raw) || 1));
+    if (which === 'from') {
+      this.rangeFrom = n;
+    } else {
+      this.rangeTo = n;
+    }
+    this.stopPlaybackForDayChange();
+    this.normalizeRange();
+    this.listenMode = 'range';
+    this.todayListOpen = true;
+    this.flash(`Listening to ${this.listenListTitle}.`);
+    queueMicrotask(() => this.updateScrollHint());
+  }
+
+  private normalizeRange(): void {
+    if (this.rangeFrom > this.rangeTo) {
+      const swap = this.rangeFrom;
+      this.rangeFrom = this.rangeTo;
+      this.rangeTo = swap;
+    }
   }
 
   get isViewingToday(): boolean {
@@ -452,10 +530,11 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
     if (target instanceof HTMLElement) {
       target.blur();
     }
-    if (day.dayIndex === this.selectedDayIndex) {
+    if (day.dayIndex === this.selectedDayIndex && this.listenMode === 'day') {
       return;
     }
     this.stopPlaybackForDayChange();
+    this.listenMode = 'day';
     this.selectedDayIndex = day.dayIndex;
 
     const sameSetAsToday =
@@ -757,7 +836,7 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
 
   toggleSequence(): void {
     const audio = this.playerRef?.nativeElement;
-    if (!audio || !this.todaySurahs.length) {
+    if (!audio || !this.listenSurahs.length) {
       return;
     }
 
@@ -774,7 +853,7 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
 
     this.sequenceMode = true;
     this.sequenceRep = 1;
-    this.startAudio(this.todaySurahs[0].number);
+    this.startAudio(this.listenSurahs[0].number);
     this.scrollPlayingSurahIntoView();
   }
 
@@ -849,10 +928,10 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
 
-    const currentIndex = this.todaySurahs.findIndex(
+    const currentIndex = this.listenSurahs.findIndex(
       (surah) => surah.number === current
     );
-    const nextSurah = this.todaySurahs[currentIndex + 1];
+    const nextSurah = this.listenSurahs[currentIndex + 1];
     if (nextSurah) {
       this.startAudio(nextSurah.number);
       this.scrollPlayingSurahIntoView();
@@ -862,9 +941,11 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
     this.sequenceMode = false;
     this.playingSurah = null;
     this.flash(
-      this.isViewingToday
-        ? 'Today’s revision sequence is complete.'
-        : `${this.selectedManzil.day}’s revision sequence is complete.`
+      this.listenMode === 'range'
+        ? `${this.listenListTitle} sequence is complete.`
+        : this.isViewingToday
+          ? 'Today’s revision sequence is complete.'
+          : `${this.selectedManzil.day}’s revision sequence is complete.`
     );
   }
 

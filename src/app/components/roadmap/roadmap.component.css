@@ -266,6 +266,18 @@
   gap: 0.35rem;
 }
 
+.range-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem;
+}
+
+@media (max-width: 560px) {
+  .range-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 .reciter-field {
   display: grid;
   grid-template-columns: auto 1fr;

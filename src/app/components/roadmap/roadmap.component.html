@@ -74,15 +74,12 @@
         <div class="listen-head">
           <div>
             <h3>Listen &amp; Mushaf</h3>
-            <span>
-              {{ selectedManzil.day }}{{ isViewingToday ? ' (today)' : '' }}
-              · Quran order · × applies to Listen &amp; Play all
-            </span>
+            <span>{{ listenHeadHint }}</span>
           </div>
           <button
             type="button"
             class="mini sequence-button"
-            *ngIf="todaySurahs.length"
+            *ngIf="listenSurahs.length"
             [class.active]="sequenceMode"
             [class.playing]="sequenceMode && isAudioPlaying"
             (click)="toggleSequence()"
@@ -116,6 +113,42 @@
               <option *ngFor="let r of reciters" [ngValue]="r.id">{{ r.label }}</option>
             </select>
           </label>
+
+          <label class="reciter-field">
+            <span>Listen</span>
+            <select
+              [ngModel]="listenMode"
+              (ngModelChange)="setListenMode($event)"
+            >
+              <option ngValue="day">This day’s set</option>
+              <option ngValue="range">Custom surah range</option>
+            </select>
+          </label>
+
+          <div class="range-row" *ngIf="listenMode === 'range'">
+            <label class="reciter-field">
+              <span>From</span>
+              <select
+                [ngModel]="rangeFrom"
+                (ngModelChange)="onRangeBoundChange('from', $event)"
+              >
+                <option *ngFor="let s of allSurahs" [ngValue]="s.number">
+                  {{ s.number }}. {{ s.name }}
+                </option>
+              </select>
+            </label>
+            <label class="reciter-field">
+              <span>To</span>
+              <select
+                [ngModel]="rangeTo"
+                (ngModelChange)="onRangeBoundChange('to', $event)"
+              >
+                <option *ngFor="let s of allSurahs" [ngValue]="s.number">
+                  {{ s.number }}. {{ s.name }}
+                </option>
+              </select>
+            </label>
+          </div>
         </div>
 
         <audio
@@ -131,17 +164,17 @@
 
         <details
           class="fold list-wrap"
-          *ngIf="todaySurahs.length; else bufferNote"
+          *ngIf="listenSurahs.length; else bufferNote"
           [open]="todayListOpen"
           (toggle)="onTodayListToggle($event)"
         >
           <summary class="fold-summary">
-            <span class="fold-title">Surahs for {{ selectedManzil.day }}</span>
-            <span class="fold-count">{{ todaySurahs.length }}</span>
+            <span class="fold-title">{{ listenListTitle }}</span>
+            <span class="fold-count">{{ listenSurahs.length }}</span>
           </summary>
           <ul class="surah-list" #surahList (scroll)="updateScrollHint()">
             <li
-              *ngFor="let s of todaySurahs"
+              *ngFor="let s of listenSurahs"
               [class.playing]="playingSurah === s.number"
             >
               <span class="s-main">
