@@ -122,6 +122,7 @@
             >
               <option ngValue="day">This day’s set</option>
               <option ngValue="range">Custom surah range</option>
+              <option ngValue="picks">Chosen surahs</option>
             </select>
           </label>
 
@@ -148,6 +149,51 @@
                 </option>
               </select>
             </label>
+          </div>
+
+          <div class="pick-wrap" *ngIf="listenMode === 'picks'">
+            <div class="quick-picks">
+              <button
+                type="button"
+                class="pick-chip"
+                *ngFor="let n of quickPicks"
+                [class.on]="isPicked(n)"
+                (click)="togglePickedSurah(n)"
+              >
+                {{ getSurahName(n) }}
+              </button>
+              <button
+                type="button"
+                class="pick-chip ghost"
+                (click)="clearPickedSurahs()"
+                [disabled]="!pickedSurahs.size"
+              >
+                Clear
+              </button>
+            </div>
+            <label class="pick-search">
+              <span class="sr-only">Search surahs</span>
+              <input
+                type="search"
+                placeholder="Search by name or number"
+                [ngModel]="pickSearch"
+                (ngModelChange)="pickSearch = $event"
+                autocomplete="off"
+              />
+            </label>
+            <div class="pick-grid" role="group" aria-label="Choose surahs">
+              <button
+                type="button"
+                class="pick-chip surah"
+                *ngFor="let s of filteredPickSurahs"
+                [class.on]="isPicked(s.number)"
+                (click)="togglePickedSurah(s.number)"
+                [attr.aria-pressed]="isPicked(s.number)"
+              >
+                <span class="num">{{ s.number }}</span>
+                <span class="name">{{ s.name }}</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -218,7 +264,12 @@
           </button>
         </details>
         <ng-template #bufferNote>
-          <p class="track-hint">Buffer day — no fixed surahs. Rest or revise weak spots.</p>
+          <p class="track-hint" *ngIf="listenMode === 'picks'">
+            Tap the surahs you want. Play all will go through them in Quran order.
+          </p>
+          <p class="track-hint" *ngIf="listenMode !== 'picks'">
+            Buffer day — no fixed surahs. Rest or revise weak spots.
+          </p>
         </ng-template>
       </div>
     </section>

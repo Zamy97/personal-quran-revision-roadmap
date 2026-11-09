@@ -278,6 +278,94 @@
   }
 }
 
+.pick-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.quick-picks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.pick-chip {
+  min-height: 2.1rem;
+  padding: 0.3rem 0.65rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--brand-deep);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.pick-chip.on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-deep);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.pick-chip.ghost {
+  background: var(--brand-soft);
+}
+
+.pick-chip:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.pick-search input {
+  width: 100%;
+  min-height: 2.4rem;
+  padding: 0.4rem 0.65rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--brand-deep);
+  font: inherit;
+}
+
+.pick-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(8.6rem, 1fr));
+  gap: 0.35rem;
+  max-height: 14rem;
+  overflow: auto;
+  padding: 0.1rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.pick-chip.surah {
+  display: grid;
+  grid-template-columns: 2rem 1fr;
+  gap: 0.3rem;
+  align-items: center;
+  border-radius: 9px;
+  text-align: left;
+  min-height: 2.45rem;
+  padding: 0.3rem 0.45rem;
+}
+
+.pick-chip.surah .num {
+  font-weight: 800;
+  color: var(--brand);
+  font-size: 0.8rem;
+}
+
+.pick-chip.surah .name {
+  font-size: 0.78rem;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .reciter-field {
   display: grid;
   grid-template-columns: auto 1fr;

@@ -78,11 +78,15 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
   /** Current play number within a surah during Play all (1-based). */
   sequenceRep = 1;
   selectedReciterId = DEFAULT_RECITER_ID;
-  /** Listen to the selected day's set, or a custom surah range (e.g. 67–72). */
-  listenMode: 'day' | 'range' = 'day';
+  /** Listen to the day's set, a contiguous range, or hand-picked surahs. */
+  listenMode: 'day' | 'range' | 'picks' = 'day';
   rangeFrom = 67;
   rangeTo = 72;
+  pickedSurahs = new Set<number>();
+  pickSearch = '';
   readonly allSurahs = SURAHS;
+  /** Common revision surahs shown as one-tap chips. */
+  readonly quickPicks = [18, 32, 36, 44, 55, 56, 67];
   /** Choices for how many times a surah plays in Play all. */
   readonly repeatChoices = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
   /** Playback speed options for the audio element / mushaf controls. */
@@ -444,26 +448,33 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
       .sort((a, b) => a.number - b.number);
   }
 
-  /** What Listen / Play all actually uses — day's set or a custom range. */
+  /** What Listen / Play all actually uses — day's set, a range, or picks. */
   get listenSurahs(): Surah[] {
-    if (this.listenMode !== 'range') {
-      return this.todaySurahs;
+    if (this.listenMode === 'range') {
+      const from = Math.min(this.rangeFrom, this.rangeTo);
+      const to = Math.max(this.rangeFrom, this.rangeTo);
+      return this.allSurahs.filter((s) => s.number >= from && s.number <= to);
     }
-    const from = Math.min(this.rangeFrom, this.rangeTo);
-    const to = Math.max(this.rangeFrom, this.rangeTo);
-    return this.allSurahs.filter((s) => s.number >= from && s.number <= to);
+    if (this.listenMode === 'picks') {
+      return this.allSurahs.filter((s) => this.pickedSurahs.has(s.number));
+    }
+    return this.todaySurahs;
   }
 
   get listenListTitle(): string {
-    if (this.listenMode !== 'range') {
-      return `Surahs for ${this.selectedManzil.day}`;
+    if (this.listenMode === 'range') {
+      const from = Math.min(this.rangeFrom, this.rangeTo);
+      const to = Math.max(this.rangeFrom, this.rangeTo);
+      if (from === to) {
+        return formatSurahName(from);
+      }
+      return `Surahs ${from}–${to}`;
     }
-    const from = Math.min(this.rangeFrom, this.rangeTo);
-    const to = Math.max(this.rangeFrom, this.rangeTo);
-    if (from === to) {
-      return formatSurahName(from);
+    if (this.listenMode === 'picks') {
+      const n = this.pickedSurahs.size;
+      return n ? `Chosen surahs · Quran order` : 'Chosen surahs';
     }
-    return `Surahs ${from}–${to}`;
+    return `Surahs for ${this.selectedManzil.day}`;
   }
 
   get listenHeadHint(): string {
@@ -475,22 +486,80 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
         ? `Custom · ${formatSurahName(from)} · ${order}`
         : `Custom range · ${from}–${to} · ${order}`;
     }
+    if (this.listenMode === 'picks') {
+      const n = this.pickedSurahs.size;
+      return n
+        ? `${n} chosen · ${order}`
+        : `Pick any surahs · ${order}`;
+    }
     return `${this.selectedManzil.day}${this.isViewingToday ? ' (today)' : ''} · ${order}`;
   }
 
-  setListenMode(mode: 'day' | 'range'): void {
+  get filteredPickSurahs(): Surah[] {
+    const q = this.pickSearch.trim().toLowerCase();
+    if (!q) {
+      return this.allSurahs;
+    }
+    return this.allSurahs.filter(
+      (s) =>
+        String(s.number).includes(q) ||
+        s.name.toLowerCase().includes(q) ||
+        surahLabel(s).toLowerCase().includes(q)
+    );
+  }
+
+  setListenMode(mode: 'day' | 'range' | 'picks'): void {
     if (this.listenMode === mode) {
       return;
     }
     this.stopPlaybackForDayChange();
     this.listenMode = mode;
-    this.todayListOpen = mode === 'range' || this.todaySurahs.length > 0;
+    this.todayListOpen = this.listenSurahs.length > 0;
     if (mode === 'range') {
       this.normalizeRange();
       this.flash(`Listening to ${this.listenListTitle}.`);
+    } else if (mode === 'picks') {
+      this.flash(
+        this.pickedSurahs.size
+          ? `Listening to ${this.pickedSurahs.size} chosen surahs in Quran order.`
+          : 'Pick the surahs you want — Play all follows Quran order.'
+      );
     } else {
       this.flash(`Back to ${this.selectedManzil.day}’s revision set.`);
     }
+    queueMicrotask(() => this.updateScrollHint());
+  }
+
+  isPicked(n: number): boolean {
+    return this.pickedSurahs.has(n);
+  }
+
+  getSurahName(n: number): string {
+    return getSurah(n)?.name ?? `Surah ${n}`;
+  }
+
+  togglePickedSurah(n: number): void {
+    const next = new Set(this.pickedSurahs);
+    if (next.has(n)) {
+      next.delete(n);
+    } else {
+      next.add(n);
+    }
+    this.pickedSurahs = next;
+    this.stopPlaybackForDayChange();
+    this.listenMode = 'picks';
+    this.todayListOpen = this.listenSurahs.length > 0;
+    queueMicrotask(() => this.updateScrollHint());
+  }
+
+  clearPickedSurahs(): void {
+    if (!this.pickedSurahs.size) {
+      return;
+    }
+    this.pickedSurahs = new Set();
+    this.stopPlaybackForDayChange();
+    this.todayListOpen = false;
+    this.flash('Cleared chosen surahs.');
     queueMicrotask(() => this.updateScrollHint());
   }
 
