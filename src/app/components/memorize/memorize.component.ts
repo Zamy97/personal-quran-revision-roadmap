@@ -69,14 +69,13 @@ export class MemorizeComponent implements OnDestroy {
   readonly surahLabel = surahLabel;
   readonly reciters = EVERYAYAH_RECITERS;
   readonly repeatChoices = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 30, 50];
-  readonly windowChoices = [2, 3, 4, 5, 6, 7, 8, 9, 10];
   readonly delayChoices = [0, 250, 500, 750, 1000, 1500, 2000, 3000];
   readonly pauseChoices = [2000, 3000, 4000, 5000, 6000, 8000, 10000, 15000];
   readonly playbackRateChoices = [0.75, 1, 1.25, 1.5, 1.75, 2];
   /** Minimum similarity (0–1) to count an ayah as recited. */
   readonly matchThreshold = 0.55;
 
-  surahNumber = 67;
+  surahNumber = 1;
   fromAyah = 1;
   toAyah = 5;
 
@@ -86,9 +85,6 @@ export class MemorizeComponent implements OnDestroy {
   newAyahRepeats = 3;
   /** Times the growing set (1–2, 1–2–3, …) plays after each new ayah. */
   setRepeats = 2;
-  /** Max ayahs in one grow window before sliding (moving window). */
-  windowSize = 5;
-  movingWindow = false;
   /** After a set finishes, pause so you can revise it in your head. */
   sequentialPause = false;
   sequentialPauseMs = 4000;
@@ -179,12 +175,7 @@ export class MemorizeComponent implements OnDestroy {
     if (!this.intelliJMode) {
       return 'Simple loop: plays the full from–to range with the loop repeat count.';
     }
-    return (
-      'New ayah alone × new-ayah repeats, then the growing set × set times. ' +
-      (this.movingWindow
-        ? 'Moving window slides the start forward after each full window.'
-        : 'Grows from your start ayah through the end of the range.')
-    );
+    return 'New ayah alone × new-ayah repeats, then the growing set × set times, from your start ayah through the end of the range.';
   }
 
   get highlightedAyahs(): Set<number> {
@@ -589,50 +580,33 @@ export class MemorizeComponent implements OnDestroy {
 
   /**
    * IntelliJ mode (Memorize Quran app):
-   * For each new ayah A in a window starting at S:
+   * For each new ayah A from the start of the range:
    *   1) play [A] alone × newAyahRepeats
-   *   2) if A > S, play range(S..A) × setRepeats
-   * With moving window: after finishing S..(S+window-1), slide S forward by 1.
+   *   2) if A > start, play range(start..A) × setRepeats
    */
   private buildIntelliJBlocks(): SessionBlock[] {
     const start = this.fromAyah;
     const end = this.toAyah;
-    const window = Math.max(2, this.windowSize);
     const newReps = Math.max(1, this.newAyahRepeats);
     const setReps = Math.max(1, this.setRepeats);
     const blocks: SessionBlock[] = [];
 
-    const buildWindow = (windowStart: number, windowEnd: number): void => {
-      for (let ayah = windowStart; ayah <= windowEnd; ayah++) {
+    for (let ayah = start; ayah <= end; ayah++) {
+      blocks.push({
+        ayahs: [ayah],
+        repeats: newReps,
+        kind: 'new',
+        label: `New ayah ${ayah}`
+      });
+      if (ayah > start) {
+        const set = range(start, ayah);
         blocks.push({
-          ayahs: [ayah],
-          repeats: newReps,
-          kind: 'new',
-          label: `New ayah ${ayah}`
+          ayahs: set,
+          repeats: setReps,
+          kind: 'set',
+          label: labelFor(set)
         });
-        if (ayah > windowStart) {
-          const set = range(windowStart, ayah);
-          blocks.push({
-            ayahs: set,
-            repeats: setReps,
-            kind: 'set',
-            label: labelFor(set)
-          });
-        }
       }
-    };
-
-    if (!this.movingWindow || end - start + 1 <= window) {
-      buildWindow(start, end);
-      return blocks;
-    }
-
-    for (
-      let windowStart = start;
-      windowStart + window - 1 <= end;
-      windowStart++
-    ) {
-      buildWindow(windowStart, windowStart + window - 1);
     }
     return blocks;
   }

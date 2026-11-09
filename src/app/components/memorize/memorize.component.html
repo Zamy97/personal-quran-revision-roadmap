@@ -84,33 +84,13 @@
           </label>
         </div>
 
-        <div class="range-row">
-          <label class="field">
-            <span>Window size</span>
-            <select
-              [(ngModel)]="windowSize"
-              [disabled]="settingsLocked || !movingWindow"
-            >
-              <option *ngFor="let n of windowChoices" [ngValue]="n">{{ n }}</option>
-            </select>
-          </label>
-          <label class="field">
-            <span>Ayah gap</span>
-            <select [(ngModel)]="ayahDelayMs" [disabled]="settingsLocked">
-              <option *ngFor="let n of delayChoices" [ngValue]="n">
-                {{ n === 0 ? 'None' : n + ' ms' }}
-              </option>
-            </select>
-          </label>
-        </div>
-
-        <label class="toggle">
-          <input
-            type="checkbox"
-            [(ngModel)]="movingWindow"
-            [disabled]="settingsLocked"
-          />
-          <span>Moving window</span>
+        <label class="field">
+          <span>Ayah gap</span>
+          <select [(ngModel)]="ayahDelayMs" [disabled]="settingsLocked">
+            <option *ngFor="let n of delayChoices" [ngValue]="n">
+              {{ n === 0 ? 'None' : n + ' ms' }}
+            </option>
+          </select>
         </label>
 
         <label class="toggle">
