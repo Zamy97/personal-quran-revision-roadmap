@@ -104,6 +104,7 @@ export class MemorizeComponent implements OnDestroy {
   isPlaying = false;
   isPaused = false;
   awaitingContinue = false;
+  pauseRemainingSec = 0;
   statusMessage = '';
   currentAyah = 0;
   currentSetLabel = '';
@@ -126,6 +127,7 @@ export class MemorizeComponent implements OnDestroy {
   private blockIndex = 0;
   private ayahIndexInSet = 0;
   private delayTimer?: ReturnType<typeof setTimeout>;
+  private pauseTick?: ReturnType<typeof setInterval>;
   private sessionToken = 0;
   /** What Resume/Continue should do after a sequential pause. */
   private afterPause: 'replay' | 'next-block' = 'next-block';
@@ -282,6 +284,9 @@ export class MemorizeComponent implements OnDestroy {
 
   /** Pause the session when another player (revision Listen) takes over audio. */
   pauseForExternalAudio(): void {
+    if (this.awaitingContinue) {
+      return;
+    }
     if (this.isPlaying && !this.isPaused) {
       this.pauseSession();
     }
@@ -289,10 +294,7 @@ export class MemorizeComponent implements OnDestroy {
 
   stopSession(): void {
     this.sessionToken += 1;
-    if (this.delayTimer) {
-      clearTimeout(this.delayTimer);
-      this.delayTimer = undefined;
-    }
+    this.clearPauseTimer();
     const audio = this.playerRef?.nativeElement;
     if (audio) {
       audio.pause();
@@ -527,6 +529,7 @@ export class MemorizeComponent implements OnDestroy {
   }
 
   private continueAfterPause(): void {
+    this.clearPauseTimer();
     this.awaitingContinue = false;
     this.isPlaying = true;
     this.isPaused = false;
@@ -673,7 +676,7 @@ export class MemorizeComponent implements OnDestroy {
     if (this.setRepeat < this.setRepeatTotal) {
       this.setRepeat += 1;
       this.ayahIndexInSet = 0;
-      if (this.shouldSequentialPause()) {
+      if (this.sequentialPause) {
         this.enterSequentialPause(
           `Revise ${this.currentSetLabel} in your head…`,
           'replay'
@@ -685,9 +688,12 @@ export class MemorizeComponent implements OnDestroy {
     }
 
     // Finished all repeats for this block.
-    if (this.shouldSequentialPause() && this.blockKind === 'set') {
+    if (this.sequentialPause) {
+      const moreBlocks = this.blockIndex + 1 < this.sessionBlocks.length;
       this.enterSequentialPause(
-        `Set done — revise ${this.currentSetLabel} in your head, then continue.`,
+        moreBlocks
+          ? `Revise ${this.currentSetLabel} in your head, then continue.`
+          : `Last set done — revise ${this.currentSetLabel} in your head.`,
         'next-block'
       );
       return;
@@ -696,35 +702,52 @@ export class MemorizeComponent implements OnDestroy {
     this.advanceToNextBlock();
   }
 
-  private shouldSequentialPause(): boolean {
-    return (
-      this.intelliJMode &&
-      this.sequentialPause &&
-      this.setQueue.length > 1
-    );
-  }
-
   private enterSequentialPause(
     message: string,
     next: 'replay' | 'next-block'
   ): void {
     this.afterPause = next;
     this.awaitingContinue = true;
+    this.isPlaying = false;
+    this.isPaused = false;
     this.statusMessage = message;
-    const audio = this.playerRef?.nativeElement;
-    audio?.pause();
+    this.playerRef?.nativeElement.pause();
 
-    // Auto-continue after the pause duration (user can also tap Continue).
+    this.clearPauseTimer();
+    const totalMs = Math.max(1000, this.sequentialPauseMs);
+    this.pauseRemainingSec = Math.round(totalMs / 1000);
     const token = this.sessionToken;
+
+    this.pauseTick = setInterval(() => {
+      this.zone.run(() => {
+        if (token !== this.sessionToken || !this.awaitingContinue) {
+          this.clearPauseTimer();
+          return;
+        }
+        this.pauseRemainingSec = Math.max(0, this.pauseRemainingSec - 1);
+      });
+    }, 1000);
+
+    this.delayTimer = setTimeout(() => {
+      this.zone.run(() => {
+        if (token !== this.sessionToken || !this.awaitingContinue) {
+          return;
+        }
+        this.continueAfterPause();
+      });
+    }, totalMs);
+  }
+
+  private clearPauseTimer(): void {
     if (this.delayTimer) {
       clearTimeout(this.delayTimer);
+      this.delayTimer = undefined;
     }
-    this.delayTimer = setTimeout(() => {
-      if (token !== this.sessionToken || !this.awaitingContinue) {
-        return;
-      }
-      this.continueAfterPause();
-    }, Math.max(500, this.sequentialPauseMs));
+    if (this.pauseTick) {
+      clearInterval(this.pauseTick);
+      this.pauseTick = undefined;
+    }
+    this.pauseRemainingSec = 0;
   }
 
   private advanceToNextBlock(): void {

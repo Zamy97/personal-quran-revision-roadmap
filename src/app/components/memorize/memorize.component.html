@@ -16,7 +16,9 @@
         {{ blockKind === 'new' ? 'New ayah' : 'Set' }}
         {{ setRepeat }}/{{ setRepeatTotal }}
       </span>
-      <span *ngIf="awaitingContinue">Sequential pause</span>
+      <span *ngIf="awaitingContinue">
+        Revise in your head{{ pauseRemainingSec ? ' · ' + pauseRemainingSec + 's' : '' }}
+      </span>
     </div>
   </div>
 
@@ -92,24 +94,6 @@
             </option>
           </select>
         </label>
-
-        <label class="toggle">
-          <input
-            type="checkbox"
-            [(ngModel)]="sequentialPause"
-            [disabled]="settingsLocked"
-          />
-          <span>Sequential pause (revise in your head)</span>
-        </label>
-
-        <label class="field" *ngIf="sequentialPause">
-          <span>Pause length</span>
-          <select [(ngModel)]="sequentialPauseMs" [disabled]="settingsLocked">
-            <option *ngFor="let n of pauseChoices" [ngValue]="n">
-              {{ n / 1000 }}s
-            </option>
-          </select>
-        </label>
       </ng-container>
 
       <ng-template #simpleLoop>
@@ -128,6 +112,28 @@
           </select>
         </label>
       </ng-template>
+
+      <label class="toggle">
+        <input
+          type="checkbox"
+          [(ngModel)]="sequentialPause"
+          [disabled]="settingsLocked"
+        />
+        <span>Sequential pause (revise in your head)</span>
+      </label>
+      <p class="hint" *ngIf="sequentialPause">
+        After each ayah or set, audio stops so you can recite from memory. Tap
+        Continue or wait for the timer.
+      </p>
+
+      <label class="field" *ngIf="sequentialPause">
+        <span>Pause length</span>
+        <select [(ngModel)]="sequentialPauseMs" [disabled]="settingsLocked">
+          <option *ngFor="let n of pauseChoices" [ngValue]="n">
+            {{ n / 1000 }}s
+          </option>
+        </select>
+      </label>
 
       <label class="field">
         <span>Reciter (EveryAyah)</span>
