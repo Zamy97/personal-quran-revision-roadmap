@@ -17,6 +17,15 @@
       <button
         type="button"
         class="btn ghost theme-toggle"
+        (click)="toggleMushafPopup()"
+        [attr.aria-pressed]="mushafSettings.popupEnabled()"
+        title="Open the mushaf popup while listening or memorizing"
+      >
+        {{ mushafSettings.popupEnabled() ? 'Mushaf on' : 'Mushaf off' }}
+      </button>
+      <button
+        type="button"
+        class="btn ghost theme-toggle"
         (click)="toggleTheme()"
         [attr.aria-label]="darkMode ? 'Switch to light mode' : 'Switch to dark mode'"
         [attr.title]="darkMode ? 'Light mode' : 'Dark mode'"

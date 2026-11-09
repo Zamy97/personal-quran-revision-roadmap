@@ -190,10 +190,10 @@
         </button>
       </div>
 
-      <label class="toggle">
-        <input type="checkbox" [(ngModel)]="followMushaf" />
-        <span>Follow mushaf while audio plays</span>
-      </label>
+      <p class="hint">
+        Turn on <strong>Mushaf on</strong> in the top bar to follow the page
+        while audio plays. The Mushaf button still opens it any time.
+      </p>
 
       <label class="toggle" *ngIf="speechSupported">
         <input type="checkbox" [(ngModel)]="hideTextWhileReciting" />

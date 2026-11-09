@@ -19,6 +19,7 @@ import {
   EVERYAYAH_RECITERS,
   everyAyahUrl
 } from '../../data/everyayah-reciters';
+import { MushafSettingsService } from '../../services/mushaf-settings.service';
 
 interface AyahText {
   number: number;
@@ -110,8 +111,6 @@ export class MemorizeComponent implements OnDestroy {
   setRepeatTotal = 0;
   blockKind: 'new' | 'set' | '' = '';
 
-  /** Keep parent mushaf viewer on the ayah currently playing. */
-  followMushaf = false;
   /** Hide Arabic text while reciting (Tarteel-style practice). */
   hideTextWhileReciting = false;
 
@@ -137,7 +136,8 @@ export class MemorizeComponent implements OnDestroy {
 
   constructor(
     private readonly http: HttpClient,
-    private readonly zone: NgZone
+    private readonly zone: NgZone,
+    private readonly mushafSettings: MushafSettingsService
   ) {
     this.loadSurahText(this.surahNumber);
   }
@@ -221,7 +221,7 @@ export class MemorizeComponent implements OnDestroy {
       this.reciteAyah ||
       this.fromAyah ||
       1;
-    this.emitMushaf(ayah);
+    this.emitMushaf(ayah, true);
   }
 
   toggleListening(): void {
@@ -471,7 +471,10 @@ export class MemorizeComponent implements OnDestroy {
     this.emitMushaf(this.reciteAyah);
   }
 
-  private emitMushaf(ayahNumber: number): void {
+  private emitMushaf(ayahNumber: number, force = false): void {
+    if (!force && !this.mushafSettings.popupEnabled()) {
+      return;
+    }
     const page = pageWithinSurahForAyah(
       this.surahNumber,
       ayahNumber,
@@ -629,7 +632,7 @@ export class MemorizeComponent implements OnDestroy {
       return;
     }
     this.currentAyah = ayah;
-    if (this.followMushaf) {
+    if (this.mushafSettings.popupEnabled()) {
       this.emitMushaf(ayah);
     }
     const kindLabel = this.blockKind === 'new' ? 'New ayah' : 'Set';

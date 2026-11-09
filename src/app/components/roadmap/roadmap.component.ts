@@ -39,6 +39,7 @@ import { SURAHS, Surah, formatSurahName, getSurah, surahLabel } from '../../data
 import { MemorizationProgress, todayKey } from '../../models/progress.model';
 import { ProgressService } from '../../services/progress.service';
 import { AuthService } from '../../services/auth.service';
+import { MushafSettingsService } from '../../services/mushaf-settings.service';
 import { MemorizeComponent } from '../memorize/memorize.component';
 import {
   PDFDocumentProxy,
@@ -102,7 +103,7 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
   /** Side-by-side spread (RTL: right = current, left = next). */
   mushafTwoPage = true;
   /** Keep mushaf open and flip pages while audio plays. */
-  mushafFollowAudio = true;
+  mushafFollowAudio = false;
   private mushafFollowSuspended = false;
   private lastFollowSyncedPage: number | null = null;
   /** Mushaf was opened from Memorize — don't start a second (surah) player. */
@@ -147,11 +148,13 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
 
   constructor(
     private readonly progressService: ProgressService,
-    private readonly auth: AuthService
+    private readonly auth: AuthService,
+    readonly mushafSettings: MushafSettingsService
   ) {
     this.progress = this.progressService.snapshot;
     this.darkMode = this.readStoredTheme();
     this.applyTheme(this.darkMode);
+    this.mushafFollowAudio = this.mushafSettings.popupEnabled();
   }
 
   get authUserLabel(): string {
@@ -312,6 +315,20 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
       /* ignore quota / private mode */
     }
     this.flash(this.darkMode ? 'Dark mode on.' : 'Light mode on.');
+  }
+
+  toggleMushafPopup(): void {
+    this.mushafSettings.toggle();
+    const on = this.mushafSettings.popupEnabled();
+    this.mushafFollowAudio = on;
+    if (!on && this.mushafOpen) {
+      this.closeMushaf();
+    }
+    this.flash(
+      on
+        ? 'Mushaf popup on — it will open while you listen or memorize.'
+        : 'Mushaf popup off — use the Mushaf buttons when you want it.'
+    );
   }
 
   private readStoredTheme(): boolean {
@@ -931,7 +948,11 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
     // Revision Listen just started — pause any running Memorize session so the
     // two players never overlap.
     this.memorizeRef?.pauseForExternalAudio();
-    if (this.mushafFollowAudio && this.playingSurah != null) {
+    if (
+      this.mushafSettings.popupEnabled() &&
+      this.playingSurah != null
+    ) {
+      this.mushafFollowAudio = true;
       this.ensureMushafFollowsSurah(this.playingSurah);
     }
   }
