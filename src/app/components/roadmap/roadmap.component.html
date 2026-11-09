@@ -129,7 +129,16 @@
           (timeupdate)="onAudioTimeUpdate()"
         ></audio>
 
-        <div class="list-wrap" *ngIf="todaySurahs.length; else bufferNote">
+        <details
+          class="fold list-wrap"
+          *ngIf="todaySurahs.length; else bufferNote"
+          [open]="todayListOpen"
+          (toggle)="onTodayListToggle($event)"
+        >
+          <summary class="fold-summary">
+            <span class="fold-title">Surahs for {{ selectedManzil.day }}</span>
+            <span class="fold-count">{{ todaySurahs.length }}</span>
+          </summary>
           <ul class="surah-list" #surahList (scroll)="updateScrollHint()">
             <li
               *ngFor="let s of todaySurahs"
@@ -174,7 +183,7 @@
           >
             {{ hiddenSurahCount > 0 ? '+' + hiddenSurahCount + ' more surahs' : 'More' }} ↓
           </button>
-        </div>
+        </details>
         <ng-template #bufferNote>
           <p class="track-hint">Buffer day — no fixed surahs. Rest or revise weak spots.</p>
         </ng-template>
@@ -253,6 +262,14 @@
           <strong>{{ memorizedPortions.length }}</strong>
           <span>portions · {{ memorizedByJuz.length }} juz</span>
         </div>
+        <button
+          type="button"
+          class="btn ghost"
+          (click)="toggleAllMemorized()"
+          *ngIf="memorizedByJuz.length"
+        >
+          {{ allMemorizedOpen ? 'Collapse all' : 'Expand all' }}
+        </button>
         <button type="button" class="btn ghost" (click)="editMemorizedList()">
           Add surahs
         </button>
@@ -275,11 +292,13 @@
       </label>
     </div>
 
-    <section
-      class="memorized-juz"
+    <details
+      class="memorized-juz fold"
       *ngFor="let group of memorizedByJuz; trackBy: trackMemorizedGroup"
+      [open]="isMemorizedGroupOpen(group.label)"
+      (toggle)="onMemorizedGroupToggle(group.label, $event)"
     >
-      <div class="memorized-section-head">
+      <summary class="memorized-section-head fold-summary">
         <div>
           <h3>{{ group.label }}</h3>
           <p>
@@ -288,7 +307,7 @@
           </p>
         </div>
         <span>{{ group.portions.length }}</span>
-      </div>
+      </summary>
 
       <div class="memorized-grid">
         <article
@@ -325,7 +344,7 @@
           </div>
         </article>
       </div>
-    </section>
+    </details>
 
     <p class="memorized-note">
       Listen plays the selected reciter’s complete surah audio. More individual

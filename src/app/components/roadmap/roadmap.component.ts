@@ -103,6 +103,10 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
   showScrollHint = false;
   hiddenSurahCount = 0;
   darkMode = false;
+  /** Today's (or selected day's) surah list starts collapsed. */
+  todayListOpen = false;
+  /** Open juz groups on the Memorized tab (all start collapsed). */
+  private readonly openMemorizedGroups = new Set<string>();
 
   /** Session-only Play all repeats per surah number (default 1). */
   private readonly repeatBySurah = new Map<number, number>();
@@ -211,6 +215,40 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
 
   trackMemorizedPortion(_index: number, portion: MemorizedPortion): string {
     return `${portion.surahNumber}:${portion.section}:${portion.title}`;
+  }
+
+  onTodayListToggle(event: Event): void {
+    const el = event.target as HTMLDetailsElement;
+    this.todayListOpen = !!el.open;
+    queueMicrotask(() => this.updateScrollHint());
+  }
+
+  isMemorizedGroupOpen(label: string): boolean {
+    return this.openMemorizedGroups.has(label);
+  }
+
+  onMemorizedGroupToggle(label: string, event: Event): void {
+    const el = event.target as HTMLDetailsElement;
+    if (el.open) {
+      this.openMemorizedGroups.add(label);
+    } else {
+      this.openMemorizedGroups.delete(label);
+    }
+  }
+
+  get allMemorizedOpen(): boolean {
+    const groups = this.memorizedByJuz;
+    return groups.length > 0 && groups.every((g) => this.openMemorizedGroups.has(g.label));
+  }
+
+  toggleAllMemorized(): void {
+    if (this.allMemorizedOpen) {
+      this.openMemorizedGroups.clear();
+      return;
+    }
+    for (const group of this.memorizedByJuz) {
+      this.openMemorizedGroups.add(group.label);
+    }
   }
 
   signOut(): void {
@@ -351,7 +389,7 @@ export class RoadmapComponent implements OnInit, AfterViewInit, OnDestroy {
 
   updateScrollHint(): void {
     const el = this.surahListRef?.nativeElement;
-    if (!el) {
+    if (!el || !this.todayListOpen) {
       this.showScrollHint = false;
       this.hiddenSurahCount = 0;
       return;
